@@ -117,7 +117,7 @@ scappell@umn.edu; seraina.cappelli@gmail.com
 
 **Data accessibility**: The original data used for this study are publicly available and are cited in the manuscript. The R-code for data processing, analysis and visualization are available for review on GitHub (https://github.com/Dr-Nonsense/2025ConsumerLegacies)
 
-**Keywords**: Consumer exclusion, Grassland, Insect herbivores, Insecticide, Functional traits, Fungal pathogens, Fungicide, Legacy effects
+**Keywords**: Consumer exclusion, Community composition, Grassland, Insect herbivores, Insecticide, Functional traits, Fungal pathogens, Fungicide, Legacy effects
 
 **Article type**: Letter
 
