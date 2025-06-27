@@ -115,7 +115,7 @@ scappell@umn.edu; seraina.cappelli@gmail.com
 
 **Statement of Authorship**: SLC conceived the idea for this study, arranged the data, conducted all analyses and wrote the first draft of the manuscript. EWS and ETB are maintaining the experiments from which most of the data used for this study originate. They advised the analysis and contributed substantially to manuscript revisions.
 
-**Data accessibility**: The original data used for this study are publicly available and are cited in the manuscript. The R-code for data processing, analysis and visualization are available for review on GitHub (https://github.com/Dr-Nonsense/2025ConsumerLegacies)
+**Data accessibility**: Most of the original data used for this study are publicly available (https://doi.org/10.6073/pasta/c1ffd1c48b504e97a93fbe3583b2508f, https://doi.org/10.6073/pasta/303607d5f92929a4b20ba127c47d21f0, https://doi.org/10.1038/s41597-022-01774-9). Additional data, steps of data processing, analysis and visualization are available for review on GitHub (https://github.com/Dr-Nonsense/2025ConsumerLegacies) and will be archived in a public repository upon manuscript publication.
 
 **Keywords**: Consumer exclusion, Community composition, Grassland, Insect herbivores, Insecticide, Functional traits, Fungal pathogens, Fungicide, Legacy effects
 
