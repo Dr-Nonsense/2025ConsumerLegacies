@@ -1,7 +1,7 @@
 # 2025ConsumerLegacies
 Code accompanying the manuscript “Legacy effects shape plant community responses to consumer exclusion”
 
-The code data.assembly.R is used to assemble the data products from raw data that are analyzed in the analysis.R code. The text for the manuscipt i created in the MS_EnemyRemoval_CommunityShift.Rmd rmarkdown document. It sources the results that are produced by analysis.R.
+The code data.assembly.R is used to assemble the data products from raw data that are analyzed in the analysis.R code. The text for the manuscipt is created in the MS_EnemyRemoval_CommunityShift.Rmd rmarkdown document. It sources the results that are produced by analysis.R.
 
 
 
