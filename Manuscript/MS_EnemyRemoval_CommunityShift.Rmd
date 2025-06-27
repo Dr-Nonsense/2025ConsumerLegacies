@@ -1,0 +1,1158 @@
+---
+title: "Legacy effects shape plant community responses to consumer exclusion"
+author: "Seraina Cappelli seraina.cappelli@gmail.com"
+output:
+ html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 5
+date: "`r Sys.Date()`"
+bibliography: EnemyRemoval_CommunityShifts_References.bib
+csl: ecology-letters.csl
+---
+
+<style>
+body {
+font-family: Times New Roman;
+p {line-height: 2em;};
+text-align: justify}
+</style>
+
+```{r setup, include=FALSE, warning = F, message=F, echo=F}
+require(knitr)
+knitr::opts_chunk$set(echo = F, message=F, warning=F, error=F)
+
+
+library(tidyverse)
+# dplyr     1.1.4     # readr     2.1.5
+# forcats   1.0.0     # stringr   1.5.1
+# ggplot2   3.5.1     # tibble    3.2.1
+# lubridate 1.9.4     # tidyr     1.3.1
+# purrr     1.0.2  
+library(broom)      # 1.14.0
+library(lme4)       # 1.1-35.1
+library(lmerTest)   # 3.1-3
+library(MuMIn)      # 1.47.5
+library(kableExtra) # 1.4.0
+library(cowplot)    # 1.1.2
+library(viridis)    # 0.6.4
+library(ggeffects)  # 1.3.4
+library(emmeans)    # 1.10.5
+library(ggpubr)     # 0.6.0
+library(ggrepel)    # 0.9.6
+library(gganimate)  # 1.0.9
+library(ggtext)     # 0.1.2
+library(glue)       # 1.8.0
+library(captioner)  # 2.2.3.9000
+
+
+# project path:
+EnemyRemovalDIR <- getwd() %>% gsub(pattern = "/Manuscript", replacement = "")
+
+# source(paste(EnemyRemovalDIR, "code-analysis/analysis.R", sep = "")
+load(paste(EnemyRemovalDIR, "/results/CWMs_BIOM.RData", sep = ""))
+
+theme_set(theme_cowplot()+
+            theme(panel.border = element_rect(colour = "black", fill=NA, size=0.5))+
+            theme(axis.text = element_text(size=8),
+                  axis.title = element_text(size=10),
+                  legend.text = element_text(size=8),
+                  legend.title = element_text(size=10),
+                  title = element_text(size=10),
+                  text = element_text(size = 8)))
+
+
+
+treatment_legend <- ggpubr::get_legend(
+  ggplot(CWM_OF, aes(y = CWM_LeafArea_Biom, x = Year, color = Treatment, fill = Treatment)) +
+    theme(legend.position = "bottom", legend.justification="center") +
+  scale_color_manual(breaks = mybreaks,
+                     values = myvalues,
+                     labels = mylabels) +
+  scale_fill_manual(breaks = mybreaks,
+                     values = myvalues,
+                     labels = mylabels) +
+    geom_line() 
+)
+
+
+legend2 <- ggpubr::get_legend(
+  plots_TrtEff_OF[["DiasporeMass"]]+ theme(legend.position = "bottom", legend.justification="center") + guides(linetype = "none")
+)
+
+
+year_legend <- ggpubr::get_legend(
+  plots_Bio$DiasporeMass$SR_Year + 
+    theme(legend.position = "bottom", legend.justification="center") +
+    labs(color = "")
+)
+
+# Figures
+fig_nums <- captioner()
+# Supplementary figures
+fig_s_nums <- captioner(prefix = "Figure S", suffix = ": ", auto_space = F)
+# Tables
+table_nums <- captioner(prefix = "Table")
+# Supplementary tables
+table_s_nums <- captioner(prefix = "Table S", suffix = ": ", auto_space = F)
+```
+
+**Short title: Plant community response to consumer exclusion**
+
+
+**Seraina L. Cappelli**^1^ https://orcid.org/0000-0002-8141-404X
+
+scappell@umn.edu; seraina.cappelli@gmail.com 
+
+**Eric W. Seabloom**^1^ https://orcid.org/0000-0001-6780-9259
+
+**Elizabeth T. Borer**^1^ https://orcid.org/0000-0003-2259-5853
+
+^1^Department of Ecology, Evolution and Behavior, College of Biological Sciences, University of Minnesota, Saint Paul, Minnesota, USA
+
+
+
+**Statement of Authorship**: SLC conceived the idea for this study, arranged the data, conducted all analyses and wrote the first draft of the manuscript. EWS and ETB are maintaining the experiments from which most of the data used for this study originate. They advised the analysis and contributed substantially to manuscript revisions.
+
+**Data accessibility**: The original data used for this study are publicly available and are cited in the manuscript. The R-code for data processing, analysis and visualization are available for review on GitHub (https://github.com/Dr-Nonsense/2025ConsumerLegacies)
+
+**Keywords**: Consumer exclusion, Grassland, Insect herbivores, Insecticide, Functional traits, Fungal pathogens, Fungicide, Legacy effects
+
+**Article type**: Letter
+
+**Abstract length**: 140 words
+
+**Main text length**: 4969 words
+
+**Number of figures**: 3
+
+**Number of tables**: 0
+
+**Number of text boxes**: 0
+
+**Number of references**: 98
+
+
+
+# Abstract
+Small consumers like microbial pathogens and insect herbivores have long been suggested as drivers of host community composition. Small consumers reduce biomass  and oftentimes promote host diversity, but their impact on the functional composition of plant communities has rarely been studied. Plant defenses, involved in ecological trade-offs, vary among species but can be costly. Thus, consumer pressure may determine community composition by shaping a community’s trait composition. Using long-term consumer exclusion experiments replicated in an experimentally planted and a naturally assembling grassland, we show that small consumers push their host communities towards high structural defense, low apparency, and low palatability. Small-scale, short-term studies in natural ecosystems may overlook this, due to legacy effects of past consumption, ongoing consumption in the surroundings and dispersal limitation. The consumer-induced trait shifts may alter ecosystem functions and potentially slow down process rates in ecosystems.
+
+# Introduction
+Plant communities are composed of the species that successfully disperse to a location, tolerate abiotic conditions, and cope with biotic pressures such as competition and consumption [@HilleRisLambers.2012; @Vellend.2010; @Hutchinson.1957; @Gleason.1926; @Godwin.1923; @Darwin.1859]. Large consumers have long been considered an important driver of plant community composition[@Darwin.1859; @Hutchinson.1957]; however, a growing body of literature suggests that small consumers, like insects and microbial pathogens, may also determine local plant diversity and community composition. Exclusion studies have shown that small consumers can consume biomass in amounts comparable to mammalian consumers [@Seabloom.2017; @Allan.2010; @Stein.2010; @Coupe.2003]. By reducing biomass, small consumers may impact local light and nutrient conditions and therefore the competitive environment, which can promote species diversity [@Borer.2014; @Descombes.2020]. Where small consumers disproportionately suppress abundant species, apparent competition can support plant diversity [@Janzen.1970; @Connell.1971]. However, density-dependent impacts can also reduce plant diversity [e.g. @Holt.1977; @Jia.2018; @Song.2022]. Small consumers like fungal pathogens and insect herbivores can serve as filters in community assembly, but their effects on plant community composition remain poorly understood.
+*Elizabeth: poor justification. Is "remains untested" better? I struggle putting this in words: we have very well informed expectations based on molecular and species level knowledge, but if it is true has not been tested if its true in complex natural communities*
+
+Consumer impacts on plant communities operate within the context of the traits of  plant community members. Trade-offs among investments in defense, growth, and competitive ability can underlie shifts in the abundance of species. Defense against consumers often comes at the cost of competitive abilities [@Chase.2002; @Viola.2010; @Terborgh.2015; @Holt.1994], growth [@Cappelli.2020; @Zaret.2024; @Lind.2013; @Giolai.2024], or tolerance to consumption [@Kempel.2011; @Parker.2018]. These trade-offs may be phylogenetically constrained [@Gougherty.2021], leading to turnover among plant species groups [@Seabloom.2018; @LaPierre.2015; @Stein.2010] or in dominance structure [@Schadler.2004.Oecologia; @Korell.2019; @Carson.1999; @LaPierre.2015] in response to altered consumer pressure. Traits associated with defense can be favored when consumer pressure is high [@Cappelli.2020] and the same traits can alter plant interactions with a wide range of consumers [@Lind.2013; @Cappelli.2020; @Zaret.2024; @Liu.2022], often reducing the community's susceptibility to many consumer groups. However, whether small consumers control the trait composition of entire communities remains untested [but see @Szefer.2020; @Yan.2022; @Cappelli.2020]. Studying functional traits, in addition to single species or species groups, provides a mechanistic understanding of ecosystem processes [@Diaz.2007] enabling generalized predictions of consumer impacts [@Gardarin.2018].
+
+A challenge in quantifying small consumer impacts on plant communities is one of legacies. Excluding consumers from existing plant communities has been a key method to study their effects [@Beaumelle.2023; @McInturff.2020]. However, inference from these studies commonly does not consider legacies of past interactions that may constrain plant community responses, with impacts on plant species composition, including species excluded by consumption persisting for decades to millennia [@Husheer.2024; @Nuttle.2011; @Allan.2011; @Furey.2024; @Knops.2000]. Because many plant species have correlated susceptibility to a range of herbivores, plant communities with a history of vertebrate grazing, like grasslands, may be dominated by plant species resistant to or tolerant of consumption by small consumers [@Zaret.2024; @Seabloom.2018; @Hulme.1996]. This leaves open the possibility that variation among field experiments in response to small consumer removal [e.g. @Janzen.1970; @Connell.1971; @Schmidt.2020] arises because t
+such experiments - especially short-term studies - are performed in plant communities shaped by varying legacies of consumer pressure.
+
+Here, using naturally and experimentally assembled plant communities, we quantify the impacts of insects and fungi on plant composition and traits through 16 years of small consumer exclusion [@Borer.2015; @Seabloom.2018]. By pairing consumer exclusion studies in plant communities with and without legacies of large herbivores, we disentangle past  from ongoing consumer impacts on plant community and trait composition. We excluded consumers from a long-term plant biodiversity experiment and from a nearby oldfield grassland that had been abandoned from agriculture 50 years before the experiment started. In the experimentally assembled plant community, species were randomly assembled from a set of local grassland species [@Tilman.2006]. The field excluded large herbivores, thus species compositions are independent of past mammalian herbivory. In contrast, the initial community composition in the oldfield represents the net effect of a legacy of five decades of selection via trade-offs among defense, competition, and dispersal of plant species in the presence of vertebrate, invertebrate, and fungal consumers. Here, the experimental treatments were applied to plant communities with traits reflecting this legacy. We used these plant communities to test how small consumers influence community reassembly across diverse communities with varying species and trait compositions. 
+
+We expected larger compositional responses to consumer removal in the oldfield than in the biodiversity experiment, for two reasons.
+First, in the oldfield experiment, new species that can benefit from reduced consumer pressure may colonize plots and complement or replace species in the plots. In the biodiversity experiment colonization is prevented by weeding, and planted species can only respond with abundance changes or local extinctions.
+Second, the average species richness is likely higher in the oldfield than the biodiversity experiment because some biodiversity experiment plots are maintained at low richness [@Jochum.2020]. Low species richness, representing lower local diversity in defense strategies may further constrain responses to consumer removal. We thus also expect larger responsesto consumer removal in the oldfield and in plots with high species richness within the biodiversity experiment.
+In contrast, locally high deer herbivory in the oldfield experiment might have left a legacy of a narrower trait range [@Jochum.2020] and domination by species with high consumer resistance traits [e.g. @Knops.2000] compared to the biodiversity experiment communities. This could constrain the oldfield responses to consumer pressure, despite higher species richness, especially if dispersal limitation reduces colonization by new species even after consumer exclusion.
+
+
+# Methods
+The consumer removal experiments are at the Cedar Creek Ecosystem Science Reserve in Minnesota, USA (Latitude 45.4N, Longitude 93,2 W). Cedar Creek is dominated by low fertility, sandy soils and has a mean annual precipitation of about 750 mm and a mean annual temperature of 6°C.
+In both experiments, consumers were excluded using pesticides every 2 weeks throughout the growing seasons (April – mid September) from 2008 until 2024. We excluded either foliar fungi (biweekly application of Quilt, Syngenta Crop Protection, Inc, Greensboro, NC, USA, based on 7.5% azoxystrobin and 12.5% propiconazole), soil oomycetes (monthly application of Ridomil Gold SL, Syngenta Crop Protection, Inc. based on 45% mefenoxam), insects (biweekly application of Marathon II, OHP, Inc., Mainland, PA, USA, based on 21.4% imidacloprid, occasionally alternated with malathion) or all groups together. Plots without pesticides served as control [see @Borer.2015; @Seabloom.2017].
+
+```{r basicSpNrs}
+Bio_design_FG <- design %>% 
+  merge(speciesinfo %>%  
+          select(Species, Functional.group) %>% 
+          mutate(Species = case_when(Species %in% "Achillea millefolium (lanulosa)" ~ "Achillea millefolium", .default = Species)), 
+        by.x = "Species2", by.y = "Species", all.x = T) %>% 
+  select(Functional.group, Species) %>% 
+  unique() %>% 
+  group_by(Functional.group) %>%
+  summarize(n = length(Species)) %>%
+  column_to_rownames("Functional.group")
+
+Bio_sp_FG <- biom_ER_Bio %>%
+  filter(Planted %in% "planted") %>%
+  select(Functional.group, Species) %>% 
+  unique() %>% 
+  group_by(Functional.group) %>%
+  summarize(n = length(Species)) %>%
+  column_to_rownames("Functional.group")
+
+
+OF_sp_FG <- biom_ER_OF %>%
+  filter(!Subplot %in% "West" & Species %in% sp_species) %>% 
+  merge(speciesinfo %>% select(Species, Functional.group), all.x =T)  %>% 
+  select(Species, Functional.group) %>% 
+  unique() %>%
+  group_by(Functional.group) %>%
+  summarize(n = length(Species)) %>%
+  column_to_rownames("Functional.group")
+
+Sown_SR_Bio <- CWM_Bio %>% 
+  select(Plot, NumSp) %>%
+  unique() %>% 
+  mutate(n = length(Plot)) %>%
+  group_by(n) %>%
+  summarize(SR_sd = sd(NumSp, na.rm=T),
+            SR = mean(NumSp, na.rm=T)) %>%
+  mutate(SR_se = SR_sd/sqrt(n))
+
+SR_Bio <- biom_ER_Bio %>%
+  filter(Planted %in% "planted") %>%
+  filter(!Year %in% c(2008, 2019, 2020)) %>% 
+  group_by(Year, Plot, Treatment) %>%
+  summarize(SR = length(Species)) %>%
+  ungroup() %>%
+  mutate(n = length(Year)) %>%
+  group_by(n) %>%
+  summarize(SR_sd = sd(SR),
+            SR = mean(SR)) %>%
+  mutate(SR_se = SR_sd/sqrt(n)) 
+
+SR_OF <- biom_ER_OF %>%
+  filter(!Subplot %in% "West") %>%
+  filter(!Species %in% sp_noplant) %>%
+  filter(!Year %in% c(2008, 2019, 2020)) %>% 
+  group_by(Year, Plot, Treatment) %>%
+  summarize(SR = length(Species)) %>%
+  ungroup() %>%
+  mutate(n = length(Year)) %>%
+  group_by(n) %>%
+  summarize(SR_sd = sd(SR),
+            SR = mean(SR)) %>%
+  mutate(SR_se = SR_sd/sqrt(n))        
+
+Bio_is_t <- anova_Bio[anova_Bio$trait=="invsimpson" & anova_Bio$Var=="Treatment",]$P_print2
+Bio_is_SR <- anova_Bio[anova_Bio$trait=="invsimpson" & anova_Bio$Var=="logNumSp",]$P_print2
+Bio_is_y <- anova_Bio[anova_Bio$trait=="invsimpson" & anova_Bio$Var=="Year1",]$P_print2
+
+OF_is_y <- anova_OF[anova_OF$trait=="invsimpson" & anova_OF$Var=="Year1",]$P_print2
+OF_is_ty <- anova_OF[anova_OF$trait == "invsimpson" & anova_OF$Var == "Treatment:Year1",]$P_print2
+```
+
+## Biodiversity Experiment
+This experiment used 41 9m x 9m plots of a grassland biodiversity experiment started in 1994. Plots contained random mixes of native prairie plants of varying species diversity (1-32), maintained through weeding. The experiment was designed based on `r sum(Bio_design_FG)` species - `r Bio_design_FG["C3",]` C3 grasses, `r Bio_design_FG["C4",]`  C4 grasses, `r Bio_design_FG["L",]` legumes, `r Bio_design_FG["F",]` non-leguminous forbs and `r Bio_design_FG["W",]` woody species [@Tilman.2006]. The two woody species were disregarded in our analyses. The consumer removal treatments were started in 1.5m x 2m subplots in 2008. All five treatments were nested within all 41 plots which resulted in 205 subplots [@Borer.2015]. The plots used for this study (monocultures were excluded, see below) had on average `r Sown_SR_Bio$SR` species originally planted, but we observed on average `r round(SR_Bio$SR, digits = 2)` ± `r round(SR_Bio$SR_se, digits = 2)` in the treatment subplots. 
+
+## Oldfield Experiment
+The same consumer removal treatments, with the addition of a fencing treatment to exclude large mammalian herbivores, were established in 2008 in eight blocks in a field abandoned from agriculture in 1956. Here, the treatment excluding all consumers included fencing, too, making it comparable to the biodiversity experiment treatment. This experiment consisted of 48 3m x 3m plots - 6 plots per block. Each plot per block was randomly assigned to one consumer exclusion treatment [@Seabloom.2018]. We identified `r sum(OF_sp_FG)` species - `r OF_sp_FG["C3",]` C3 grasses, `r  OF_sp_FG["C4",]` C4 grasses, `r  OF_sp_FG["L",]` legumes, `r  OF_sp_FG["F",]`,  non-leguminous forbs and `r  OF_sp_FG["W",]` woody species. On average, a plot contained `r round(SR_OF$SR, digits = 2)` ± `r round(SR_OF$SR_se, digits = 2)` species.
+
+## Community composition
+```{r quality numbers}
+qual_bio <-   (data_quality_Bio %>%
+  pivot_longer(cols = starts_with("rel_biomass"),
+               names_to = "trait",
+               names_prefix = "rel_biomass_",
+               values_to = "value") %>%
+  filter(!trait %in% "LDMC") %>%
+  summarize(sd = sd(value),
+            mean = mean(value)) %>%
+  mutate(sd = round(100*sd, digits = 1),
+         mean = round(100*mean, digits = 1)) %>%
+  mutate(xx = paste(mean, " ± ", sd, "%", sep = "")))$xx
+  
+qual_of <- (data_quality_OF %>%
+  pivot_longer(cols = starts_with("rel_biomass"),
+               names_to = "trait",
+               names_prefix = "rel_biomass_",
+               values_to = "value") %>%
+  filter(!trait %in% "LDMC") %>%
+  summarize(sd = sd(value),
+            mean = mean(value)) %>%
+  mutate(sd = round(100*sd, digits = 1),
+         mean = round(100*mean, digits = 1)) %>%
+  mutate(xx = paste(mean, " ± ", sd, "%", sep = "")))$xx
+
+qual_LDMC_bio <- (data_quality_Bio %>%
+  pivot_longer(cols = starts_with("rel_biomass"),
+               names_to = "trait",
+               names_prefix = "rel_biomass_",
+               values_to = "value") %>%
+  filter(trait %in% "LDMC") %>%
+  summarize(sd = sd(value),
+            mean = mean(value)) %>%
+  mutate(sd = round(100*sd, digits = 1),
+         mean = round(100*mean, digits = 1)) %>%
+  mutate(xx = paste(mean, " ± ", sd, "%", sep = "")))$xx
+
+qual_LDMC_of <-  (data_quality_OF %>%
+  pivot_longer(cols = starts_with("rel_biomass"),
+               names_to = "trait",
+               names_prefix = "rel_biomass_",
+               values_to = "value") %>%
+  filter(trait %in% "LDMC") %>%
+  summarize(sd = sd(value),
+            mean = mean(value)) %>%
+  mutate(sd = round(100*sd, digits = 1),
+         mean = round(100*mean, digits = 1)) %>%
+  mutate(xx = paste(mean, " ± ", sd, "%", sep = "")))$xx
+```
+
+We characterized the plant community composition in both experiments based on traits, functional group abundance and species diversity. For this, we used species level above-ground biomass from 2009 to 2024, collected annually (except for 2019 and 2020) in clip strips of 1m x 10cm [@Kinkel.2024a; @Kinkel.2024b]. Based on plant abundance and species trait data from @Diaz.2022 we calculated community weighted trait means (CWM) for each plot and year. In the biodiversity experiment, we used only species initially planted in each plot. 
+The traits related to palatability and nutritional value (leaf tissue nitrogen and seed mass), plant size (leaf area and plant height), and leaf structure and toughness (leaf mass area [LMA], leaf dry matter content [LDMC]). On average, plants with trait data comprised `r qual_bio` of the total plant biomass in the biodiversity and `r qual_of` in the oldfield experiment for all traits except for LDMC. Plants with LDMC data available accounted for `r qual_LDMC_bio` (biodiversity) and `r qual_LDMC_of` (oldfield) of the biomass. 
+Further, we assigned a functional group (C3 grass, C4 grass, leguminous forb, non-leguminous forb, sedge or woody) to each plant species and calculated the functional group abundance per plot and year. 
+To estimate realized species diversity, we calculated the Inverse Simpson index of diversity, which includes species evenness and species numbers, for each plot and year. Because CWM and diversity cannot vary in monocultures, we excluded the monoculture plots from this analysis. We used 130 treatment plots within 26 diversity plots.
+
+## Analysis
+
+We did all analyses in R [@RCoreTeam.2022] and visualizations with ggplot2 [@Wickham.2016]. We analyzed community composition (scaled CWM trait values) with a principal component analysis (PCA). To assess how much variation in community composition was explained by the presence of small consumers - and in the biodiversity experiment, species richness - throughout the study, we used a Permutational ANOVA (PERMANOVA) using the adonis2 function with Euclidian distance from vegan on scaled CWM trait data [@Oksanen.2019]. We included treatment, year, and for the biodiversity experiment, log-transformed species richness, as explanatory variables. To visualize the temporal change in community composition under different treatment combinations, we calculated the ellipse center for each experiment, treatment, and year, regressed the centers PC1 and PC2 scores against year for each treatment and experiment, and mapped the model predictions to the PCA plot.
+
+We tested treatment, time, and sown species richness effects in the biodiversity experiment on CWM trait values and realized diversity (Inverse Simpson) with linear mixed effect models fitted with lme4 [@Bates.2015]. For both experiments we included year and consumer removal treatment as fixed effects. For the biodiversity experiment, we also included the log-transformed sown species richness as fixed effect. We fitted all possible interactions between fixed effects and included random intercepts for plot and year. The random intercept per treatment plot was nested within diversity experiment plot (biodiversity) or block (oldfield). For detailed Tukey post-hoc analyses, we used emmeans [@Lenth.2022].
+Further, we tested if functional plant group abundances underpinned treatment effects on CWM trait values by fitting contrasts for the abundance of each single functional group before the other fixed effects in each model. We  compared the effects of year and treatment on CWM traits between the initial model and the model with the abundance of the most important (based on lowest model AIC) functional group.
+
+To assess individual species abundance changes over time, we fitted a linear mixed effects model [@Bates.2015] for each species occurring 10 or more times in any treatment over time. Species' biomass was analyzed in response to treatment, year and their interaction as fixed effects with random intercepts for plot and year. From each species’ model, we extracted the average treatment effect and slope (change over time) per treatment with emmeans [@Lenth.2022].
+
+
+
+# Results
+## Community trait composition
+
+The first two PCA axes explained `r 100*round((CWM_pca %>% summary())$importance[2,1], 2)`% and `r 100*round((CWM_pca %>% summary())$importance[2,2], 2)`% of the functional trait space. PC1 was mostly related to palatability and nutritional quality (CWM leaf nitrogen content, CWM seed mass) and partly to apparency (CWM plant height), PC2 mostly to leaf structure and toughness (CWM LMA, CWM LDMC) and to some extent apparency (CWM plant height). The biodiversity experiment covered a larger functional trait space than the oldfield experiment, especially along PC1. As previously shown, naturally assembled communities were largely a subset of experimentally assembled communities [@Jochum.2020], but, more specifically, these were a subset of communities of low nutritional value and palatability (`r fig_nums("PCA", display = "cite")`a). Consumer removal explained `r round(100*permanova_bio[permanova_bio$Variable %in% "Treatment","R2"], digits = 1)`% in the biodiversity and `r round(100*permanova_OF[permanova_OF$Variable %in% "Treatment","R2"], digits = 1)`% in the oldfield experiment. Year explained `r round(100*permanova_bio[permanova_bio$Variable %in% "Year","R2"], digits = 1)`% in the biodiversity and `r round(100*permanova_OF[permanova_OF$Variable %in% "Year","R2"], digits = 1)`% and oldfield experiment. Over time, the ellipses centers of the biodiversity experiment shifted along PC1 towards lower nutritional value and palatability and thus closer to the oldfield experiments trait space. The exact direction varied by consumer removal treatment mainly along PC2. The oldfield experiment communities were more variable in time and moved further in the functional trait space between years, but the overall direction was along PC2 towards tougher leaves (`r fig_nums("PCA", display = "cite")`b, `r fig_s_nums("trajectory_detail", display = "cite")`).
+
+## Community trait changes
+```{r}
+Bio_N_y <- anova_Bio[anova_Bio$trait=="Nmass" & anova_Bio$Var=="Year1",]$P_print2
+Bio_LA_y <- anova_Bio[anova_Bio$trait %in% "LeafArea" & anova_Bio$Var %in% "Year1",]$P_print2
+Bio_PH_y <- anova_Bio[anova_Bio$trait %in% "PlantHeight" & anova_Bio$Var %in% "Year1",]$P_print2
+OF_PH_y <- anova_OF[anova_OF$trait=="PlantHeight" & anova_OF$Var =="Year1",]$P_print2
+OF_LMA_y <- anova_OF[anova_OF$trait=="LMA" & anova_OF$Var =="Year1",]$P_print2
+OF_LDMC_y <- anova_OF[anova_OF$trait=="LDMC" & anova_OF$Var =="Year1",]$P_print2
+```
+Over time, CWM tissue nitrogen decreased  (`r Bio_N_y`, `r fig_s_nums("pred_bio_N", display = "cite")`a), and CWM leaf area (`r Bio_LA_y`, `r fig_s_nums("pred_bio_LA", display = "cite")`a) and CWM plant height (`r Bio_PH_y`, `r fig_s_nums("pred_bio_PH", display = "cite")`a) increased in the biodiversity experiment (`r table_s_nums("anovas_bio", display = "cite")`).
+In the oldfield experiment, CWM plant height decreased (`r OF_PH_y`, `r fig_s_nums("pred_of_PH", display = "cite")`a), and CWM LMA (`r OF_LMA_y`, `r fig_s_nums("pred_of_LMA", display = "cite")`a) and CWM LDMC (`r OF_LDMC_y`, `r fig_s_nums("pred_of_LDMC", display = "cite")`a) increased over time (`r table_s_nums("anovas_of", display = "cite")`). 
+
+
+```{r single_trt_effs}
+OF_N_ty <- (anova_Bio %>% filter(trait %in% "Nmass" & Var %in% "Treatment:Year1") )$P_print2
+OF_LMA_ty <- (anova_Bio %>% filter(trait %in% "LMA" & Var %in% "Treatment:Year1") )$P_print2
+OF_LDMC_ty <- (anova_Bio %>% filter(trait %in% "LDMC" & Var %in% "Treatment:Year1") )$P_print2
+
+# All pesticides 
+AP_SM_y <- (posthoc_Bio[["DiasporeMass"]] %>% 
+  data.frame() %>%
+  filter(contrast %in% "Control - AllPesticides" & p.value > 0.05) %>%
+  mutate(Year = Year1 + 2008))$Year %>%
+  min() %>%
+  ceiling()
+
+# Foliar fungicide effect on CWM Seed Mass in the biodiversity experiment
+df <- expand_grid(Year1 = 16, 
+                  Treatment = c("FoliarFungicide", "Control"),
+                  logNumSp = log(mean(4, 16, 32)))
+df$pred <- predict(mods_Bio[["DiasporeMass"]], newdata = df, re.form = NA)
+
+FF_SM_eff <- 100 *(df[df$Treatment %in% "FoliarFungicide",]$pred - df[df$Treatment %in% "Control",]$pred) / df[df$Treatment %in% "Control",]$pred
+
+FF_SM_p <- posthoc_Bio[["DiasporeMass"]] %>% 
+  data.frame() %>% 
+  filter(Year1 %in% 16 & contrast %in% "Control - FoliarFungicide") %>% 
+  select(p.value) %>%
+  mutate(p = ifelse(p.value < 0.001, "(p < 0.001)", paste("p =", round(p.value, digits = 3))))
+
+FF_SM <- paste(round(FF_SM_eff, digits = 2), "% (", FF_SM_p$p, ")", sep ="")
+
+FF_SM_y <- (posthoc_Bio[["DiasporeMass"]] %>% 
+  data.frame() %>%
+  filter(contrast %in% "Control - FoliarFungicide" & p.value < 0.05) %>%
+  mutate(Year = Year1 + 2008))$Year %>%
+  min() %>%
+  ceiling()
+
+
+# Inseciticde effect on CWM Plant height in the Biodiversity experiment
+df <- expand_grid(Year1 = 16, 
+                  Treatment = c("Insecticide", "Control"),
+                  logNumSp = log(mean(4, 16, 32)))
+df$pred <- predict(mods_Bio[["PlantHeight"]], newdata = df, re.form = NA)
+
+I_PH_eff <-100 *(df[df$Treatment %in% "Insecticide",]$pred - df[df$Treatment %in% "Control",]$pred) / df[df$Treatment %in% "Control",]$pred
+
+I_PH_p <- posthoc_Bio[["PlantHeight"]] %>% 
+  data.frame() %>% 
+  filter(Year1 %in% 16 & contrast %in% "Control - Insecticide") %>% 
+  select(p.value) %>%
+  mutate(p = ifelse(p.value < 0.001, "(p < 0.001)", paste("p =", round(p.value, digits = 3))))
+
+I_PH <- paste(round(I_PH_eff, digits = 2), "% (", I_PH_p$p, ")", sep ="")
+
+I_PH_y <- (posthoc_Bio[["PlantHeight"]] %>% 
+  data.frame() %>%
+  filter(contrast %in% "Control - Insecticide" & p.value < 0.05) %>%
+  mutate(Year = Year1 + 2008))$Year %>%
+  min() %>%
+  ceiling()
+
+# Soil drench fungicide effect on CWM Leaf area in the Biodiversity experiment
+df <- expand_grid(Year1 = 16, 
+                  Treatment = c("SoilDrenchFungicide", "Control"),
+                  logNumSp = log(mean(4, 16, 32)))
+df$pred <- predict(mods_Bio[["LeafArea"]], newdata = df, re.form = NA)
+
+SF_LA_eff <- 100 *(df[df$Treatment %in% "SoilDrenchFungicide",]$pred - df[df$Treatment %in% "Control",]$pred) / df[df$Treatment %in% "Control",]$pred
+
+SF_LA_p <- posthoc_Bio[["LeafArea"]] %>% 
+  data.frame() %>% 
+  filter(Year1 %in% 16 & contrast %in% "Control - SoilDrenchFungicide") %>% 
+  select(p.value) %>%
+  mutate(p = ifelse(p.value < 0.001, "(p < 0.001)", paste("p =", round(p.value, digits = 3))))
+
+SF_LA <- paste(round(SF_LA_eff, digits = 2), "% (", SF_LA_p$p, ")", sep ="")
+
+SF_LA_y <- (posthoc_Bio[["LeafArea"]] %>% 
+  data.frame() %>%
+  filter(contrast %in% "Control - SoilDrenchFungicide" & p.value < 0.05) %>%
+  mutate(Year = Year1 + 2008))$Year %>%
+  min() %>%
+  ceiling()
+
+
+# Foliar fungicide effect on CWM LMA in the Oldfield experiment
+df <- expand_grid(Year1 = 16, 
+                  Treatment = c("FoliarFungicide", "Control"),
+                  logNumSp = log(mean(4, 16, 32)))
+df$pred <- predict(mods_OF[["LMA"]], newdata = df, re.form = NA)
+
+FF_LMA_eff <- 100 *(df[df$Treatment %in% "FoliarFungicide",]$pred - df[df$Treatment %in% "Control",]$pred) / df[df$Treatment %in% "Control",]$pred
+
+FF_LMA_p <- posthoc_OF[["LMA"]] %>% 
+  data.frame() %>% 
+  filter(Year1 %in% 16 & contrast %in% "Control - FoliarFungicide") %>% 
+  select(p.value) %>%
+  mutate(p = ifelse(p.value < 0.001, "(p < 0.001)", paste("p =", round(p.value, digits = 3))))
+
+FF_LMA <- paste(round(FF_LMA_eff, digits = 2), "% (", FF_LMA_p$p, ")", sep ="")
+
+FF_LMA_y <- (posthoc_OF[["LMA"]] %>% 
+  data.frame() %>%
+  filter(contrast %in% "Control - FoliarFungicide" & p.value < 0.05) %>%
+  mutate(Year = Year1 + 2008))$Year %>%
+  min() %>%
+  ceiling()
+
+
+# Foliar fungicide and all pesticides effect on LDMC in the Biodiversity experiment
+df <- expand_grid(Year1 = 16, 
+                  Treatment = c("FoliarFungicide", "AllPesticides", "Control"),
+                  logNumSp = log(mean(4, 16, 32)))
+df$pred <- predict(mods_Bio[["LDMC"]], newdata = df, re.form = NA)
+
+FF_LDMC_eff <- round(100 *(df[df$Treatment %in% "FoliarFungicide",]$pred - df[df$Treatment %in% "Control",]$pred) / df[df$Treatment %in% "Control",]$pred, digits = 2)
+
+AP_LDMC_eff <- round(100 *(df[df$Treatment %in% "AllPesticides",]$pred - df[df$Treatment %in% "Control",]$pred) / df[df$Treatment %in% "Control",]$pred, digits = 2)
+
+LDMC_p <- posthoc_Bio[["LDMC"]] %>% 
+  data.frame() %>% 
+  filter(Year1 %in% 16 & contrast %in% c("Control - FoliarFungicide", "Control - AllPesticides")) %>% 
+  select(contrast, p.value) %>%
+  mutate(p = ifelse(p.value < 0.001, "(p < 0.001)", paste("p =", round(p.value, digits = 3))))
+
+FF_LDMC <- paste(round(FF_LDMC_eff, digits = 2), "% (", LDMC_p[LDMC_p$contrast %in% ("Control - FoliarFungicide"),]$p, ")", sep ="")
+
+AP_LDMC <- paste(round(AP_LDMC_eff, digits = 2), "% (", LDMC_p[LDMC_p$contrast %in% ("Control - AllPesticides"),]$p, ")", sep ="")
+
+APFF_LDMC_y <- posthoc_Bio[["LDMC"]] %>% 
+  data.frame() %>%
+  filter(contrast %in% c("Control - FoliarFungicide", "Control - AllPesticides") & p.value < 0.05) %>%
+  mutate(Year = Year1 + 2008) %>%
+  group_by(contrast) %>%
+  summarize(Year = ceiling(min(Year))) 
+
+
+start_years <- c(FF_SM_y, I_PH_y, SF_LA_y, FF_LMA_y, APFF_LDMC_y$Year)
+```
+
+
+In the biodiversity experiment, consumer removal treatments had an effect alone or in interaction with year on all CWM traits except on CWM LMA and the effect of species richness on all CWM traits changed over the years (`r table_s_nums("anovas_bio", display = "cite")`). 
+In the oldfield experiment, consumer removal treatment had an interactive effect with year on CWM seed mass (`r OF_N_ty`), CWM LMA (`r OF_LMA_ty`) and CWM LDMC (`r OF_LDMC_ty`, `r table_s_nums("anovas_of", display = "cite")`).
+Almost all observed treatment effects occurred late in the experiment duration in both experiments (`r fig_s_nums("trteff", display = "cite")`).
+In the biodiversity experiment, all treatment effects increased apparency and palatability, as hypothesized: 
+In 2024, foliar fungicide increased CWM seed mass by `r FF_SM` (`r fig_nums("trteff_cor", display = "cite")`b),
+insecticide increased plant height by `r I_PH` (`r fig_nums("trteff_cor", display = "cite")`c), 
+soil drench fungicide increased CWM leaf area by `r SF_LA` (`r fig_nums("trteff_cor", display = "cite")`d)
+and plots with foliar fungicide and all pesticides decreased LDMC by `r gsub(FF_LDMC, pattern = "-", replacement = "")` and `r gsub(AP_LDMC, pattern = "-", replacement = "")`, respectively (`r fig_nums("trteff_cor", display = "cite")`f) relative to the control. 
+All differences started to emerge after a minimum of `r min(start_years)-2008` years of experiment duration (`r min(start_years)`-`r max(start_years)`). 
+The only exception was that CWM seed mass was higher in the all pesticides than in the control plots throughout most of the experiment duration (`r fig_s_nums("trteff", display = "cite")`b). While there was an overall treatment effect on CWM tissue nitrogen, the consumer removal treatments did not differ from the control at any time point because CWM tissue nitrogen was lower in insecticide than foliar fungicide and all pesticides plots, while the control plots had intermediate CWM tissue nitrogen (`r fig_s_nums("trteff", display = "cite")`a). 
+In the oldfield experiment the only difference between treatment and control plots differed from our expectations: CWM LMA was `r FF_LMA` higher in fungicide than control plots (`r fig_nums("trteff_cor", display = "cite")`e), with significant effects from `r FF_LMA_y` onward.
+Although plots with different consumer removal treatments differed in CWM LDMC and seed mass changes over time, these differences were not strong enough to detect differences between treatment and control plots at any time point (`r fig_s_nums("trteff", display = "cite")`).
+Treatment effects in the biodiversity experiment and oldfield experiment were uncorrelated (`r fig_nums("trteff_cor", display = "cite")`).
+
+Including legume abundance improved models (lower AIC) for CWM tissue nitrogen in both the biodiversity (`r table_s_nums("anovas_bio_N", display = "cite")`) and oldfield (`r table_s_nums("anovas_of_N", display = "cite")`) experiments, though it did not explain treatment effects or interactions. In the biodiversity experiment, legumes improved the model for CWM seed mass (`r table_s_nums("anovas_bio_SM", display = "cite")`) and explained the decline in CWM tissue nitrogen over time (`r fig_s_nums("pred_bio_N", display = "cite")`a,b). In contrast, the model without functional group abundance generated the lowest AIC in the olfield experiment (`r table_s_nums("anovas_of_SM", display = "cite")`).
+
+CWM plant height in both experiments was best explained when C4 grass abundance was included. In the biodiversity experiment, it did not explain treatment effects (`r table_s_nums("anovas_bio_PH", display = "cite")`), but in the oldfield experiment, it explained the decline in height over time (`r table_s_nums("anovas_of_PH", display="cite")`, `r fig_s_nums("pred_of_PH", display="cite")`).
+For CWM leaf area, forb and legume abundance yielded the lowest AICs for the biodiversity and oldfield experiments, respectively, but did not explain treatment effects (`r table_s_nums("anovas_bio_LA", display = "cite")`, `r table_s_nums("anovas_of_LA", display = "cite")`).
+
+Including forb abundance reduced model AIC for CWM LMA in both experiments. It did not explain treatment effects in the biodiversity experiment (`r table_s_nums("anovas_bio_LMA", display = "cite")`), but did in the oldfield experiment (`r table_s_nums("anovas_bio_LMA", display = "cite")`).
+For CWM LDMC, functional group abundance did not reduce model AIC in either experiment (`r table_s_nums("anovas_bio_LDMC", display = "cite")`-`r table_s_nums("anovas_of_LDMC", display = "cite")`).
+
+
+## Species diversity
+In the biodiversity experiment, species diversity increased with sown species richness (`r Bio_is_SR`) and decreased over time (`r Bio_is_y`), but was unaltered by consumer treatment (`r Bio_is_t`, `r table_s_nums("anovas_bio_invsimpson", display = "cite")`, `r fig_s_nums("pred_bio_invsimpson", display="cite")`a,c). The abundance of single functional groups did not explain any responses (`r table_s_nums("anovas_bio_invsimpson", display = "cite")`, `r fig_s_nums("pred_bio_invsimpson", display="cite")`).
+
+The inverse Simpson index increased over time (`r OF_is_y`), and while there was a significant interaction between treatment and year (`r OF_is_ty`), diversity  never differed between treatment and control plots (`r table_s_nums("anovas_of_invsimpson", display = "cite")`, `r fig_s_nums("pred_of_invsimpson", display="cite")`). The abundance of single functional groups did not explain any of the observed effects (`r table_s_nums("anovas_of_invsimpson", display = "cite")`).
+
+## Species responses
+
+```{r basicSpNrs2}
+Bio_FG <- sp_change[sp_change$exp %in% "Biodiversity experiment",] %>%
+  select(Species, Functional.group) %>%
+  unique() %>%
+  group_by(Functional.group) %>%
+  summarise(n = length(Species)) %>%
+  column_to_rownames("Functional.group")
+
+OF_FG <- sp_change[sp_change$exp %in% "Oldfield experiment",] %>%
+  select(Species, Functional.group) %>% 
+  unique() %>%
+  group_by(Functional.group) %>%
+  summarize(n = length(Species)) %>%
+  column_to_rownames("Functional.group")
+
+ sp_overlap <- sp_change %>%
+   select(Species, Functional.group, exp) %>%
+   unique() %>%
+   group_by(Species, Functional.group) %>%
+   summarize(n = length(exp)) %>%
+   filter(n > 1)
+```
+
+Of the `r sum(Bio_design_FG) - 2` sown non-tree species in the biodiversity experiment, `r sum(Bio_FG)` species - `r Bio_FG["C3",]` C3 grasses, `r Bio_FG["C4",]` C4 grasses, `r Bio_FG["L",]` legumes and `r Bio_FG["F",]` non-leguminous forbs - were abundant enough (occurred more than 10 times in at least one treatment) for detailed analysis.
+In the oldfield experiment, the same was true for `r sum(OF_FG)` - `r OF_FG["C3",]` C3 grasses, `r OF_FG["C4",]` C4 grasses, `r OF_FG["L",]` legumes and `r OF_FG["F",]` non-leguminous forbs - of the total `r sum(OF_sp_FG)` species.  Commonly, treatment altered the strength but not the direction of species-level biomass change over time. For example, *Lespedeza capitata* biomass decreased over time in all treatments, fungicide enhanced this effect (`r fig_nums("heatmap", display = "cite")`).
+Species’ biomass responses to enemy removal were largely unrelated to trait values, with three exceptions in the biodiversity experiment (`r fig_s_nums("plot_sp_TrtEff2", display = "cite")`): large seeded species benefited most from all pesticides, and biomass increased most in response to insecticide and all pesticides for low LDMC species. 
+For the `r nrow(shared_species)` species occurring at sufficient abundance in both experiments, the treatment responses were not correlated between experiments (`r fig_s_nums("sp_TrtEff_cor", display = "cite")`).
+
+# Discussion
+This study demonstrates that small consumers exert strong, long-term influence on plant community functional composition. Using a unique combination of experimentally and naturally assembled plant communities tracked for over a decade, we show that consumer pressure drives convergence toward consumer-resistant traits. The biodiversity experiment spanned a broader functional trait space than the oldfield experiment [@Jochum.2020], encompassing both high- and low-palatability strategies. In contrast, the oldfield communities occupied a subset of this space, biased toward traits associated with low palatability and nutritional quality (`r fig_nums("PCA", display="cite")`a). Nonetheless, small consumers shifted both the experimentally planted and oldfield communities toward dominance by lower quality traits (`r fig_nums("PCA", display="cite")`b), indicating persistent selection by local conditions and consumers. Consumer removal shifted trait composition in the biodiversity experiment toward higher palatability, apparency, and lower toughness (`r fig_nums("trteff_cor", display="cite")`), consistent with herbivore-driven selection, but this only became evident after `r min(start_years)-2008` and `r max(start_years)-2008` years. In contrast, the oldfield experiment showed minimal or unexpected responses (`r fig_nums("trteff_cor", display="cite")`), likely due to limited trait variability arising from a legacy of past consumer pressure [@HilleRisLambers.2012]. These findings reveal that small herbivores can drive long-term functional change and that legacy effects and dispersal limitation may maintain consumer-resistant communities even after consumption is reduced. Long-term, trait-based approaches are essential to uncover these hidden but consequential dynamics.
+
+## Biodiversity vs. Oldfield experiment
+We expected larger responses in trait composition in the oldfield than in the biodiversity experiment, due to fewer constraints on community composition and presumably higher species richness. However, most treatment effects occurred in the biodiversity experiment (`r fig_nums("trteff_cor", display="cite")`), despite more total and per plot species in the oldfield than the biodiversity experiment. Similarly, within the biodiversity experiment, treatment effects did not vary with sown species richness (`r table_s_nums("anovas_bio", display = "cite")`). Diverse communities may be more responsive to consumers due to portfolio effects [@Doak.1998; @Tilman.1998; @Keesing.2006], but they may also be more resistant to consumers, because of dilution effects [@Keesing.2006]. Consistent with this, work at Cedar Creek found fewer insect herbivores and lower pathogen damage in high diversity plots [@Mitchell.2002; @Haddad.2009] and a constant proportion of biomass was consumed across diversity levels [@Seabloom.2017], despite higher insect abundance at high plant richness [@Haddad.2009; @Borer.2012]. Thus, species-poor communities may lack the functional breath to respond to altered consumer pressure whereas high diversity communities may have less need to respond.
+
+Although the oldfield experiment had more total and abundant plant species than the biodiversity experiment, these were mostly non-leguminous forbs. Legumes and C4 grasses were rare in the oldfield. The biodiversity experiment, by design, had a more even representation across functional groups (`r fig_nums("heatmap", display = "cite")`), resulting in the broader functional trait space (`r fig_nums("PCA", display = "cite")`) - a pattern typical of biodiversity experiments that often extend trait distributions beyond those found in naturally assembling communities [@Jochum.2020]. Here, the trait space included variation in consumer attractiveness, with oldfield plants representing those at the low end of palatability andnutritional quality in the biodiversity experiment's trait spectrum (`r fig_nums("PCA", display = "cite")`). Together, high species richness and a functionally constrained, consumer resistant trait composition likely limited trait responses to consumer removal in the oldfield experiment.
+
+## Treatment effects
+Plants with high nutritional quality and soft leaves are a more attractive and better food source [e.g. @Buckley.2023; @Loaiza.2011; but see @Kempel.2015] that experience greater pathogen and herbivore impacts [e.g. @SalgadoLuarte.2023; @Cappelli.2020; @Brian.2024; @Tesitel.2021]. Our results reveal that foliar fungi reduce mean seed mass but increase LDMC, soil fungi reduce leaf area, and insects decrease plant height (`r fig_nums("trteff_cor", display="cite")`), consistent with studies showing that species with those traits are particularly susceptible to herbivory [@Lebbink.2024]. While the general direction of consumer impact is consistent in the literature, the exact match between consumer group and affected trait can vary. For example, we found that foliar fungicide, but not insecticide, changed CWM LDMC, while @Szefer.2020 found the opposite. Single traits can respond to a suite of different environmental variables [@Lavorel.2002; @Bello.2013; @SchellenbergerCosta.2017], different consumers within the pools of organisms that are suppressed by broad spectrum pesticides likely have different feeding preferences, and other variables like chemical defenses may be linked to traits [@Giolai.2024; @Pellissier.2018] that underpin trait changes. Considering variations in local conditions, the identity of the consumers present and the plant communities' traits and trait range, such differences are not surprising. These results highlight the importance of simultaneously considering multiple traits, when studying ecosystem level impacts of consumers.
+
+Short-term studies of insect and pathogen exclusion have shown limited and inconsistent effects on CWM traits, with changes in response to consumer removal typically emerging only under specific conditions such as insecticide use or nutrient addition [@Szefer.2020;@Yan.2022;@Cappelli.2020]. Importantly, among-year variation in consumer impacts can dominate the results of short-term studies [@LaPierre.2015; @Stein.2010; @Schadler.2004.Oecologia]. Our long-term study reveals that compositional turnover takes `r min(start_years)-2008` or more years to become detectable. Similar time spans have been identified by @Korell.2019 for insect impact on dominance patterns and by @Allan.2011 for insect impacts on biomass, reinforcing that long-term studies are necessary to reliably quantify small consumer impacts on plant communities.
+
+In this study, relationships between single species traits and their biomass response to consumer removal were weak (`r fig_s_nums("plot_sp_TrtEff2", display="cite")`) and consumers alone did not drive species declines or increases over time (`r fig_nums("heatmap", display = "cite")`). This contrasts with previous studies reporting strong consumer-driven turnover in dominant species [e.g. @Schadler.2004.Oecologia; @Korell.2019; @Carson.1999]. Nonetheless, cumulative changes in species' biomass produced clear treatment effects at the community level (`r fig_nums("trteff_cor", display = "cite")`). Small consumer effects on individual species may have been masked by other factors influencing  species abundances, but together they generated detectable community level shifts. Similarly, @Schadler.2004.Oecologia reports mismatches between species and functional group responses to consumers. These findings underscore the value of an ecosystem perspective on plant-consumer interactions which can reveal broader ecological consequences that studies focusing on single or few focal species [e.g. @Vincent.1996; @Lau.2008] may miss.
+
+Small consumer-induced changes in functional trait composition potentially alter ecosystem functioning [@Yan.2022]. Here CWM traits shifted towards slower growth strategies in response to consumer pressure [@Diaz.2016; @Wright.2004], and slow-growing plant communities are associated with slower rates of ecosystem functioning than fast-growing communities [@Neyret.2024], including impacts on biomass production or decomposition [@ChaconLabella.2022; @Hagan.2023; @Cadotte.2017; @Furey.2023; @Cornwell.2008; @Pichon.2020]. Our results suggest that small consumers may slow ecosystem processes by shifting plant composition, although to date, the impacts of small consumers on ecosystem functions beyond biomass production have rarely been studied [but see @Mulder.1999], and their indirect impacts via trait-mediated plant responses remain a key knowledge gap.
+
+## Trade-offs & Legacy effects
+Resistance to consumers often comes with costs to competitive ability [@Chase.2002; @Viola.2010; @Terborgh.2015; @Holt.1994], growth [@Cappelli.2020; @Zaret.2024; @Lind.2013; @Giolai.2024] or consumption tolerance [@Kempel.2011; @Parker.2018]. This raises the question why, even after 16 years of experiment, faster growing and more competitive species had not colonized the oldfield plots where consumer pressure was experimentally reduced and species diversity continued to increase throughout the experiment duration (`r fig_s_nums("pred_of_invsimpson", display = "cite")`) [@Isbell.2019]. Dispersal limitation is a likely explanation. Both defense [@Cappelli.2020; @Zaret.2024; @Lind.2013; @Brian.2024] and dispersal [@Tilman.1994; @Sullivan.2018] trade-off with growth and competitive ability. This links defense and dispersal through co-trade-offs. Greater seed mass is also directly linked to reduced dispersal [@Sullivan.2018] and increased seed predator preference [@Dylewski.2020]. However, short dispersal distances can increase exposure to the mother plants' pathogens and herbivores [@Janzen.1970; @Connell.1971] and thus evolutionary pressure for increased defense, which could weaken the co-trade-off. Large seeded species have been shown to have strategies [coarser roots and association with arbuscular mycorrhizal fungi, @Bergmann.2017] to escape root pathogens. Our results indicate that the same is not true for defenses against above-ground pathogens: large seeded species were more vulnerable to foliar fungal pathogens (`r fig_nums("trteff_cor", display = "cite")`, `r fig_s_nums("trteff", display="cite")`).
+
+The dominance of non-leguminous forbs, species with high dispersal ability [@Sullivan.2018] likely underlies the lower CWM seed mass in the oldfield experiment (`r fig_nums("PCA", display = "cite")`). The oldfield communities are still reassembling half a century after agricultural abandonment [@Isbell.2019], with early colonization by species possessing high dispersal ability [@Sullivan.2018]. Larger-seeded, slower-dispersing species that may benefit from consumer suppression take longer to colonize and our results indicate their absence might reflect a legacy of consumption. Herbivory or fungal pathogens reduce seed production [@Dickson.2010], further reducing the likelihood of successful colonization. Similarly, widespread deer herbivory at Cedar Creek has suppressed legumes, species with particularly large seeds [@Sullivan.2018] in oldfields [@Ritchie.1995; @Knops.2000]. In contrast, deer exclusion from the biodiversity experiment allowed planted legumes to remain abundant. Consumers in the surrounding area likely continue to filter out susceptible species. Together, agriculture, consumer pressure, dispersal limitation and other factors have created legacy effects that constrain oldfield community responses to altered consumer pressure. As a result, consumer manipulation experiments in naturally assembled communities, especially at small spatial or temporal scales, may underestimate or - given the uncorrelated treatment effects in the two experiments (`r fig_nums("trteff_cor", display = "cite")`) - overlook the impacts of consumers on community composition. 
+
+
+## Conclusion
+In summary, small consumers shape the ecosystem functional composition, favoring traits associated with high defense, low apparency, and low palatability, likely causing cascading consequences for ecosystem functioning. Our long-term experiments reveal that both past and on-going consumer pressure combined with dispersal limitation likely constrain the ability of communities to respond to altered consumer pressure. These constraints are rarely accounted for, leading us to underestimate the importance of small consumers in shaping plant communities. Global changes are altering consumer population dynamics [e.g. @Ceballos.2023; @Paini.2016; @Seebens.2017], and their influence may strongly mediate plant community responses to anthropogenic environmental changes. Recognizing the role of  consumers in community assembly is critical for predicting ecosystem responses to global change. Insect herbivores and fungal pathogens, though small, can have large and long-lasting impacts, by inducing trait-mediated legacy effects.
+
+
+# Acknowledgements
+We are incredibly grateful to Troy Mielke, Dan Bahauddin and the entire Cedar Creek team for running the research facility and for collecting and curating the data. We also thank Jésus Pinto-Ledezma for assembling the trait data for the Cedar Creek species. We acknowledge that our experiments are on the Dakota and Ojibwe peoples ancestral homelands, whose connection to this land continues to this day. The experiments at Cedar Creek are made possible by funding from the U.S. National Science foundation (DEB-0620652, DEB-1234162, DEB-1831944). S.L.C is supported by the Swiss National Science Foundation (P500PB_214352).
+
+# References
+<div id="refs"></div>
+
+
+# Figures
+
+## `r fig_nums("PCA", display = "cite")` PCA
+
+```{r PCA, anchor="figure", fig.width=6, fig.height=13}
+plot_grid(
+  compplot + 
+    theme(legend.position = c(0,0), 
+          legend.justification = c(0,0), 
+          legend.margin = margin(l = 10, b = 10)), # +
+    # geom_rect(aes(xmin = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$x.range[1],
+    #               xmax = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$x.range[2], 
+    #               ymin = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$y.range[1],
+    #               ymax = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$y.range[2],), 
+    #           fill = NA, color = "black"),  
+  compplot_trajectory_details3  +
+        guides(alpha = guide_legend(order = 1),
+           color = guide_legend(order = 2, nrow = 3)) +
+    theme(legend.position = c(0,0),
+          legend.justification = c(0,0),
+          legend.margin = margin(l = 10, b = 10),
+          legend.box = "center",
+          legend.box.just = "left"),
+  rel_heights = c(1,2), nrow = 2,
+  axis = "rl",   align = "hv",
+  labels = c("a)", "b)")
+)
+```
+
+```{r, include=F}
+fig_nums("PCA", "a) Principal component analysis of all CWM trait values over the years with 95% ellipses in the biodiversity (blue) and oldfield (orange) experiments and b) the temporal change of ellipse center in the biodiversity and oldfield experiments per treatment. The arrows illustrate the direction of change from 2009 to 2024 of the centers. These arrows are based on linear models regressing the coordinates of the ellipse center per year, treatment and experiment against year." )
+```
+
+`r fig_nums("PCA")`
+
+
+## `r fig_nums("trteff_cor", display = "cite")` Treatment effects
+
+```{r trteff_cor, echo=F, warning=F, message=F,  fig.height = 12, fig.width = 8, fig.showtext=TRUE}
+plot_grid(
+plot_grid(
+  
+  plots_effect_correlations[["Nmass"]] + theme(legend.position = "none"),
+  plots_effect_correlations[["DiasporeMass"]] + theme(legend.position = "none"),
+  plots_effect_correlations[["PlantHeight"]] + theme(legend.position = "none"),
+  plots_effect_correlations[["LeafArea"]] + theme(legend.position = "none"),
+  plots_effect_correlations[["LMA"]] + theme(legend.position = "none"),
+  plots_effect_correlations[["LDMC"]] + theme(legend.position = "none"),
+  
+  ncol=2, align= "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+ggdraw(legend2),
+  ncol = 1,
+  rel_heights = c(0.95, 0.05)
+)
+```
+
+```{r, include = F}
+fig_nums("trteff_cor", "Correlations between consumer removal treatment effects (compared to the control) in the biodiversity and oldfield experiment at the end of the experiments in 2024. The effect sizes and their standard errors (SE) in this figure are based on post-hoc analyses that were done with the emmeans package. The displayed effect sizes are the pairwise contrasts between each enemy removal treatment and the control treatment in the two experiments. When the error bar line is solid, the treatment effect is statistically significant, where it is dashed, the difference is not statistically significant (based on Tukey HSD post-hoc analysis). The grey line at zero represents the control treatment baseline. The grey areas indicate the expected direction of the treatment effect for both (dark grey) or only one (light grey) of the experiments.")
+```
+`r fig_nums("trteff_cor")`
+
+
+## `r fig_nums("heatmap", display = "cite")` Species changes over time
+
+```{r heatmap, fig.width = 6, fig.height = 10}
+heatmap + theme(legend.key.width = unit(1.2, "cm"))
+```
+
+```{r, include = F}
+fig_nums("heatmap", "We estimated species biomass change over time per treatment for each species for which we had ten or more biomass measurements over time in any given treatment per experiment. Species for which we were able to estimate change over time in both experiments are highlighted in bold. Biomass declines over time are shown in red, biomass increases in blue. P-values for the marginal trends (t-test) are indicated by \\*, \\*\\* and \\*\\*\\* for p < 0.05, p < 0.01 and p < 0.001, respectively.")
+```
+`r fig_nums("heatmap")`
+
+
+# Supplementary
+**Legacy effects shape plant community responses to consumer exclusion**
+
+
+**Seraina L. Cappelli**^1^ https://orcid.org/0000-0002-8141-404X
+
+scappell@umn.edu; seraina.cappelli@gmail.com 
+
+**Eric W. Seabloom**^1^ https://orcid.org/0000-0001-6780-9259
+
+**Elizabeth T. Borer**^1^ https://orcid.org/0000-0003-2259-5853
+
+^1^Department of Ecology, Evolution and Behavior, College of Biological Sciences, University of Minnesota, Saint Paul, Minnesota, USA
+
+## Community trait composition
+```{r pca_time_detail2, anchor="figure", width = 12, fig.width = 10}
+compplot_trajectory_details
+```
+
+```{r, include=F}
+fig_s_nums("trajectory_detail", "Path of ellipse center between the years in the biodiversity and oldfield experiments per treatment.")
+```
+`r fig_s_nums("trajectory_detail")`
+
+## Community trait changes
+### Baseline CWM trait models
+```{r, include=F}
+table_s_nums("anovas_bio", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year and their interactive effects on CWM plant traits in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio")`
+```{r anovas_bio}
+all_anova_for_print_Bio
+```
+
+
+```{r, include=F}
+table_s_nums("anovas_of", "Test statistics (Wald χ^2^) and p-values for treatment, year and their interactive effects on CWM plant traits in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of")`
+```{r anovas_of}
+all_anova_for_print_OF
+```
+
+
+
+```{r trteff, echo=F, warning=F, message=F,  fig.height = 10, fig.width = 10}
+plot_grid(
+
+plot_grid(
+  plots_TrtEff[["Nmass"]] + theme(legend.position = "none"),
+  plots_TrtEff[["DiasporeMass"]] + theme(legend.position = "none"),
+  plots_TrtEff[["PlantHeight"]] + theme(legend.position = "none"),
+  plots_TrtEff[["LeafArea"]] + theme(legend.position = "none"),
+  plots_TrtEff[["LMA"]] + theme(legend.position = "none"),
+  plots_TrtEff[["LDMC"]] + theme(legend.position = "none"),
+  
+  ncol=2, align= "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+ggdraw(legend2),
+  ncol = 1,
+  rel_heights = c(0.95, 0.05)
+)
+```
+
+```{r, include=F}
+fig_s_nums("trteff", "Differences between CWM trait values in plots with consumer removal treatments and control plots. The effect sizes in this figure are based on post-hoc analyses that were done with the emmeans package. The displayed effect sizes are the pairwise contrasts between each enemy removal treatment and the control treatment at any given time point. Where the line is solid, the treatment effect is statistically significant, where it is dashed, the difference is not statistically significant. The grey line at zero, represents the control baseline.")
+```
+
+**figgure currently cited in odd order**
+`r fig_s_nums("trteff")`
+
+
+### CWM Tissue nitrogen models
+
+```{r, include=F}
+fig_s_nums("pred_bio_N", "Model predictions of CWM tissue nitrogen in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e) and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_N", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM tissue nitrogen in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_N")`
+
+```{r Nmass_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["Nmass"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["Nmass"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["Nmass"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["Nmass"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["Nmass"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["Nmass"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["Nmass"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_bio_N")`
+
+
+```{r, include=F}
+fig_s_nums("pred_of_N", "Model predictions of CWM tissue nitrogen in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a) and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_N", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM tissue nitrogen in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_N")`
+
+```{r Nmass_FG_of_mods,  fig.height = 4.5, fig.width = 10}
+anova_for_print_FG_OF[["Nmass"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["Nmass"]] + theme(legend.position = "none"),
+   plots_FG_OF[["Nmass"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+**figure currently not cited**
+`r fig_s_nums("pred_of_N")`
+
+
+### CWM Seed mass models
+
+```{r, include=F}
+fig_s_nums("pred_bio_SM", "Model predictions of CWM seed mass in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e) and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_SM", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM seed mass in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_SM")`
+
+```{r DiasporeMass_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["DiasporeMass"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["DiasporeMass"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["DiasporeMass"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["DiasporeMass"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["DiasporeMass"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["DiasporeMass"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["DiasporeMass"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+**figure currently not cited**
+`r fig_s_nums("pred_bio_SM")`
+
+
+```{r, include=F}
+fig_s_nums("pred_of_SM", "Model predictions of CWM seed mass in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a) and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_SM", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM seed mass in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_SM")`
+
+```{r DiasporeMass_FG_of_mods,  4.5, fig.width = 10}
+anova_for_print_FG_OF[["DiasporeMass"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["DiasporeMass"]] + theme(legend.position = "none"),
+   plots_FG_OF[["DiasporeMass"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+**figure currently not cited**
+`r fig_s_nums("pred_of_SM")`
+
+
+### CWM Plant height models
+
+```{r, include=F}
+fig_s_nums("pred_bio_PH", "Model predictions of CWM plant height in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e) and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_PH", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM plant height in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_PH")`
+
+```{r PlantHeight_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["PlantHeight"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["PlantHeight"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["PlantHeight"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["PlantHeight"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["PlantHeight"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["PlantHeight"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["PlantHeight"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_bio_PH")`
+
+
+```{r, include=F}
+fig_s_nums("pred_of_PH", "Model predictions of CWM plant height in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a) and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_PH", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM plant height in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_PH")`
+
+```{r PlantHeight_FG_of_mods,  4.5, fig.width = 10}
+anova_for_print_FG_OF[["PlantHeight"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["PlantHeight"]] + theme(legend.position = "none"),
+   plots_FG_OF[["PlantHeight"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_of_PH")`
+
+
+
+### CWM Leaf area models
+
+```{r, include=F}
+fig_s_nums("pred_bio_LA", "Model predictions of CWM leaf area in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e) and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_LA", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM leaf ara in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_LA")`
+
+```{r LeafArea_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["LeafArea"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["LeafArea"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["LeafArea"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["LeafArea"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["LeafArea"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["LeafArea"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["LeafArea"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_bio_LA")`
+
+
+```{r, include=F}
+fig_s_nums("pred_of_LA", "Model predictions of CWM leaf area in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a) and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_LA", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM leaf ara in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_LA")`
+
+```{r LeafArea_FG_of_mods,  4.5, fig.width = 10}
+anova_for_print_FG_OF[["LeafArea"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["LeafArea"]] + theme(legend.position = "none"),
+   plots_FG_OF[["LeafArea"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+**figure currently not cited**
+`r fig_s_nums("pred_of_LA")`
+
+
+### CWM LMA models
+
+```{r, include=F}
+fig_s_nums("pred_bio_LMA", "Model predictions of CWM LMA in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e) and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_LMA", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM LMA in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_LMA")`
+
+```{r LMA_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["LMA"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["LMA"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["LMA"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["LMA"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["LMA"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["LMA"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["LMA"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+**figure currently not cited**
+`r fig_s_nums("pred_bio_LMA")`
+
+
+```{r, include=F}
+fig_s_nums("pred_of_LMA", "Model predictions of CWM LMA in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a) and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_LMA", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM LMA in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_LMA")`
+
+```{r LMA_FG_of_mods,  4.5, fig.width = 10}
+anova_for_print_FG_OF[["LMA"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["LMA"]] + theme(legend.position = "none"),
+   plots_FG_OF[["LMA"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_of_LMA")`
+
+
+
+### CWM LDMC models
+
+```{r, include=F}
+fig_s_nums("pred_bio_LDMC", "Model predictions of CWM LDMC in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e)  and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_LDMC", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM LDMC in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_LDMC")`
+
+```{r LDMC_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["LDMC"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["LDMC"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["LDMC"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["LDMC"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["LDMC"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["LDMC"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["LDMC"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+**figure currently not cited**
+`r fig_s_nums("pred_bio_LDMC")`
+
+
+
+```{r, include=F}
+fig_s_nums("pred_of_LDMC", "Model predictions of CWM LDMC in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a)  and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_LDMC", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM LDMC in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_LDMC")`
+
+```{r LDMC_FG_of_mods,  4.5, fig.width = 10}
+anova_for_print_FG_OF[["LDMC"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["LDMC"]] + theme(legend.position = "none"),
+   plots_FG_OF[["LDMC"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_of_LDMC")`
+
+
+
+## Species diversity
+
+```{r, include=F}
+fig_s_nums("pred_bio_invsimpson", "Model predictions of CWM inverse Simpson index in the biodiversity experiment including all pairwise interactions. Comparison between model predictions from the base model (a, c, e)  and the model including the abundance of the functional group with the lowest AIC value (b, d, f). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_bio_invsimpson", "Test statistics (Wald χ^2^) and p-values for treatment, species richness, year, their interactive effects and plant functional group abundance on CWM inverse Simpson index in the biodiversity experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_bio_invsimpson")`
+
+```{r invsimpson_FG_bio_mods,  fig.height = 12, fig.width = 10}
+anova_for_print_FG_Bio[["invsimpson"]]
+
+plot_grid(
+plot_grid(
+   plots_Bio[["invsimpson"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_FG_Bio[["invsimpson"]]$Treatment_Year + theme(legend.position = "none"),
+   plots_Bio[["invsimpson"]]$Treatment_SR + theme(legend.position = "none"),   
+   plots_FG_Bio[["invsimpson"]]$Treatment_SR + theme(legend.position = "none"),
+   plots_Bio[["invsimpson"]]$SR_Year + theme(legend.position = "none"),        
+   plots_FG_Bio[["invsimpson"]]$SR_Year + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+
+plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_bio_invsimpson")`
+
+
+
+```{r, include=F}
+fig_s_nums("pred_of_invsimpson", "Model predictions of CWM invsimpson in the oldfield experiment including all pairwise interactions. Comparison between model predictions from the base model (a)  and the model including the abundance of the functional group with the lowest AIC value (b). The solid lines show fixed effects, the dashed lines include the variation between years that is included in the random effects.")
+table_s_nums("anovas_of_invsimpson", "Test statistics (Wald χ^2^) and p-values for treatment, year, their interactive effect and plant functional group abundance on CWM invsimpson in the oldfield experiment. Bolded values indicate significance at the α= 0.05 level."
+)
+```
+`r table_s_nums("anovas_of_invsimpson")`
+
+```{r invsimpson_FG_of_mods,  4.5, fig.width = 10}
+anova_for_print_FG_OF[["invsimpson"]]
+
+plot_grid(
+plot_grid(
+   plots_OF[["invsimpson"]] + theme(legend.position = "none"),
+   plots_FG_OF[["invsimpson"]] + theme(legend.position = "none"),
+   
+   ncol = 2, align = "hv",
+  
+  labels = c("a)", "b)")),
+
+ggdraw(treatment_legend),
+  ncol = 1,
+  rel_heights = c(0.9, 0.1))
+```
+
+`r fig_s_nums("pred_of_invsimpson")`
+
+## Species responses
+```{r plot_sp_TrtEff2,  fig.height = 10, fig.width = 13}
+plot_sp_TrtEff2
+```
+
+```{r, include=F}
+fig_s_nums("plot_sp_TrtEff2", "The response of single species biomass to consumer removal is largely uncorrelated with species trait values, with a few exceptions. The trait values of some example species are indicated on the x-axis")
+```
+`r fig_s_nums("plot_sp_TrtEff2")`
+
+
+```{r sp_TrtEff_cor,  4.5, fig.width = 8, fig.height = 6.5}
+plot_sp_TrtEff_cor
+```
+
+```{r, include=F}
+fig_s_nums("sp_TrtEff_cor", "The response of single species biomass to consumer removal in the biodiversity experiment is not correlated to the response in the oldfield experiment. The grey lines lines represent no response to consumer removal. Values above and right of the grey lines indicate increased biomass relative to the control in the oldfield and biodiversity experiment respectively. Values below and left of the grey lines indicate decreased biomass relative to the control in the oldfield and biodiversity experiment respectively.")
+```
+`r fig_s_nums("sp_TrtEff_cor")`
