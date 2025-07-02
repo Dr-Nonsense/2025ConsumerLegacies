@@ -23,7 +23,6 @@ library(ggeffects)  # 1.3.4
 library(emmeans)    # 1.10.5
 library(ggpubr)     # 0.6.0
 library(ggrepel)    # 0.9.6
-library(gganimate)  # 1.0.9
 library(vegan)      # 2.6-4
 library(ggtext)     # 0.1.2
 library(glue)       # 1.8.0
