@@ -582,7 +582,7 @@ biom_ER_Bio <- biom_ER_Bio %>%
   # biomass bags were weighted twice -> remove duplicates
   distinct(.keep_all = T) %>%
   # some entries are doubled, but without identical biomass number. Most likely
-  # the species was accidentally sorted into two piles and not combined leater
+  # the species was accidentally sorted into two piles and not combined later
   group_by(Year, Date, Plot, Treatment, Species) %>%
   summarize(Mass.g.m.2. = sum(Mass.g.m.2.))
 
