@@ -957,7 +957,6 @@ write.csv(div_ER_OF_biom, "data-derived/E245_div.csv")
 #### SPECIES BIOMASS CHANGE ####
 
 # find how often a species occurs minimum per treatment across all plots and time points
-# find how often a species occurs minimum per treatment across all plots and time points
 abundant_species_per_treatment_Bio <- biom_ER_Bio %>%
   merge(plotinfo_Bio %>% select(ER244.Plot, PlantSpNum),
         by.x = "Plot", by.y = "ER244.Plot") %>%
@@ -1034,8 +1033,9 @@ biomass_for_sp_model_OF <- biom_ER_OF %>%
   droplevels()
 
 
-# run models
+# run models per species and treatment
 posthoc_biom_slopes_bio <- data.frame()
+posthoc_biom_slopes_bio2 <- data.frame()
 posthoc_biom_TrtEff_bio <- data.frame() 
 for (i in levels(droplevels(biomass_for_sp_model_bio$Species))){
   df = biomass_for_sp_model_bio %>%
@@ -1056,6 +1056,14 @@ for (i in levels(droplevels(biomass_for_sp_model_bio$Species))){
         filter(grepl("Control", contrast)) %>%
         mutate(estimate = estimate * (-1),
                Species = paste(i))
+      
+      slopes2 = emtrends(model, ~ Treatment, var = "Year2", infer = TRUE) %>%
+        contrast(method = "pairwise", adjust = "bonferroni") %>%
+        data.frame() %>%
+        filter(grepl("Control", contrast)) %>%
+        mutate(Species = paste(i)) %>%
+        rename("yeareffect_dif" = "estimate")
+      
     } else {
       TrtEff = data.frame(contrast = NA,
                           estimate = NA,
@@ -1084,11 +1092,23 @@ for (i in levels(droplevels(biomass_for_sp_model_bio$Species))){
   }
   
   posthoc_biom_slopes_bio = rbind.data.frame(posthoc_biom_slopes_bio, slopes)
+  posthoc_biom_slopes_bio2 = rbind.data.frame(posthoc_biom_slopes_bio2, slopes2)
   posthoc_biom_TrtEff_bio = rbind.data.frame(posthoc_biom_TrtEff_bio, TrtEff)
 }
 
+posthoc_biom_slopes_bio <- posthoc_biom_slopes_bio %>%
+  merge(
+    posthoc_biom_slopes_bio2 %>%
+      select(contrast, Species, p.value) %>%
+      mutate(contrast = gsub(contrast, pattern = "Control - ", replacement = "")) %>%
+      rename("p.value_vs.Control" = "p.value",
+             "Treatment"          = "contrast"),
+    by = c("Treatment", "Species"), all.x=T
+  )
+
 
 posthoc_biom_slopes_of <- data.frame()
+posthoc_biom_slopes_of2 <- data.frame()
 posthoc_biom_TrtEff_of <- data.frame()
 for (i in levels(droplevels(biomass_for_sp_model_OF$Species))){
   df = biomass_for_sp_model_OF %>% 
@@ -1109,6 +1129,14 @@ for (i in levels(droplevels(biomass_for_sp_model_OF$Species))){
         filter(grepl("Control", contrast)) %>%
         mutate(estimate = estimate * (-1),
                Species = paste(i))
+      
+      slopes2 = emtrends(model, ~ Treatment, var = "Year2", infer = TRUE) %>%
+        contrast(method = "pairwise", adjust = "bonferroni") %>%
+        data.frame() %>%
+        filter(grepl("Control", contrast)) %>%
+        mutate(Species = paste(i)) %>%
+        rename("yeareffect_dif" = "estimate")
+      
     } else {
       TrtEff = data.frame(contrast = NA,
                           estimate = NA,
@@ -1138,8 +1166,20 @@ for (i in levels(droplevels(biomass_for_sp_model_OF$Species))){
   }
   
   posthoc_biom_slopes_of = rbind.data.frame(posthoc_biom_slopes_of, slopes)
+  posthoc_biom_slopes_of2 = rbind.data.frame(posthoc_biom_slopes_of2, slopes2)
   posthoc_biom_TrtEff_of = rbind.data.frame(posthoc_biom_TrtEff_of, TrtEff)
 }
+
+posthoc_biom_slopes_of <- posthoc_biom_slopes_of %>%
+  merge(
+    posthoc_biom_slopes_of2 %>%
+      select(contrast, Species, p.value) %>%
+      mutate(contrast = gsub(contrast, pattern = "Control - ", replacement = "")) %>%
+      rename("p.value_vs.Control" = "p.value",
+             "Treatment"          = "contrast"),
+    by = c("Treatment", "Species"), all.x=T
+  )
+
 
 
 # merge results 
@@ -1173,7 +1213,6 @@ posthoc_TrtEff_biom <-
         by = "Species", 
         all.x = T) %>%
   mutate(Species = factor(Species, unique(Species)),
-         Treatment = gsub(contrast, pattern = "Control - ", replacement = ""),
          Treatment = factor(Treatment, levels = c("Control", 
                                                   "Fenced", 
                                                   "Insecticide", 

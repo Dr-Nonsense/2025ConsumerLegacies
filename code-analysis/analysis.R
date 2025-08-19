@@ -4,8 +4,6 @@
 # Bonaparte, Sophie Hunger - Daft Punk Spielen in meinem Haus
 
 
-## SETUP ####
-
 library(tidyverse)
 # dplyr     1.1.4     # readr     2.1.5
 # forcats   1.0.0     # stringr   1.5.1
@@ -28,13 +26,8 @@ library(vegan)      # 2.6-4
 library(ggtext)     # 0.1.2
 library(glue)       # 1.8.0
 
-# project path:
-EnemyRemovalDIR <- getwd() %>% paste(., "/", sep = "")
-
-
-# prep some things to be used in figures
 theme_set(theme_cowplot()+
-            theme(panel.border = element_rect(colour = "black", fill=NA, linewidth=0.5))+
+            theme(panel.border = element_rect(colour = "black", fill=NA, size=0.5))+
             theme(axis.text = element_text(size=8),
                   axis.title = element_text(size=10),
                   legend.text = element_text(size=8),
@@ -113,7 +106,9 @@ rm(BBc_Control.ER, BBc_Single.All, BBc_Herbivores.Fungi, BBc_Soil.Foliar,
    OFc_Control.ER, OFc_Single.All, OFc_Herbivores.Fungi, OFc_Insects.Mammals, 
    OFc_Soil.Foliar, OFc_Large.Small, OFc_Insect.Fungi)
 
-## GET DATA ####
+## DATA ####
+EnemyRemovalDIR <- getwd() 
+
 CWM_Bio <- read.csv(paste(EnemyRemovalDIR, "/data-derived/e244_CWMTraits.csv", sep = "")) %>%
   filter(!Year %in% c(2007)) %>%
   mutate(logNumSp = log(NumSp),
@@ -281,7 +276,6 @@ plot_data2 <- CWM_pca %>%
                             column %in% "Nmass" ~ "Tissue N"))
 
 
-##### -> FIGURE 1a ####
 compplot <- ggplot(plot_data1, aes(x=PC1, y=PC2)) + 
   theme(legend.position = "bottom") +
   labs(x = paste("PC1 (", 100*round((CWM_pca %>% summary())$importance[2,1], 2), "%)", sep = ""),
@@ -296,8 +290,110 @@ compplot <- ggplot(plot_data1, aes(x=PC1, y=PC2)) +
             size = 4)+ 
   stat_ellipse(type = "norm", aes(color =experiment), show.legend = FALSE, size = 1.5)
 
+  
+PC1234_fig <- 
+  plot_grid(
+    ggplot(plot_data1, aes(PC1, PC2)) + 
+      theme(legend.position = "bottom") +
+      labs(x = paste("PC1 (", 100*round((CWM_pca %>% summary())$importance[2,1], 2), "%)", sep = ""),
+           y = paste("PC2 (", 100*round((CWM_pca %>% summary())$importance[2,2], 2), "%)", sep = "")) +
+      scale_color_manual(values = c(Oldfield = "#DDBB55", Biodiversity = "#9988CC"))+ 
+      geom_point(size = 1.5, aes(color = experiment), alpha = 0.5) +
+      geom_segment(data = plot_data2, xend = 0, yend = 0, arrow = arrow(type = "closed", end = "first", length = unit(0.03, "npc")), size = 1, ) +
+      geom_text(data = plot_data2,  aes(label = column), hjust = 0, nudge_x = +0.02, fontface = "bold")+ 
+      stat_ellipse(type = "norm", aes(color =experiment), show.legend = FALSE),
+    
+    PC34_fig <-
+      ggplot(plot_data1, aes(PC3, PC4)) + 
+      theme(legend.position = "bottom") +
+      labs(x = paste("PC3 (", 100*round((CWM_pca %>% summary())$importance[2,3], 2), "%)", sep = ""),
+           y = paste("PC4 (", 100*round((CWM_pca %>% summary())$importance[2,4], 2), "%)", sep = "")) +
+      scale_color_manual(values = c(Oldfield = "#DDBB55", Biodiversity = "#9988CC"))+ 
+      geom_point(size = 1.5, aes(color = experiment), alpha = 0.5) +
+      geom_segment(data = plot_data2, xend = 0, yend = 0, arrow = arrow(type = "closed", end = "first", length = unit(0.03, "npc")), size = 1, ) +
+      geom_text(data = plot_data2,  aes(label = column), hjust = 0, nudge_x = +0.02, fontface = "bold")+ 
+      stat_ellipse(type = "norm", aes(color =experiment), show.legend = FALSE)
+  )
+
+
 
 #### trajectory through time ####
+
+centers = data.frame(PC1 = numeric(), 
+                     PC2 = numeric(), 
+                     PC1_prev = numeric(), 
+                     PC2_prev = numeric(), 
+                     Year = integer(), 
+                     experiment = factor())
+
+for(i in unique(plot_data1$experiment)){
+  subs1 <- plot_data1 %>% filter(experiment %in% i)
+  
+  for(j in 1:length(sort(unique(subs1$Year)))){
+    subs2 <- subs1 %>% filter(Year %in% (sort(unique(subs1$Year)))[j])
+    subs3 <- subs1 %>% filter(Year %in% (sort(unique(subs1$Year)))[j-1])
+    xx <- cov.wt(subs2[,c("PC1", "PC2")])$center %>% 
+      t() %>% 
+      data.frame()
+    yy <-  cov.wt(subs3[,c("PC1", "PC2")])$center %>% 
+      t() %>% 
+      data.frame() %>%
+      rename("PC1_prev" = "PC1",
+             "PC2_prev" = "PC2")
+    xx  <- cbind.data.frame(xx, yy, Year = sort(unique(subs1$Year))[j], experiment = i)
+    
+    centers = rbind(centers, xx)
+  }
+}
+
+centers <- centers %>%
+  mutate(PC1_prev = case_when(Year %in% 2009 ~ NA, .default = PC1_prev),
+         PC2_prev = case_when(Year %in% 2009 ~ NA, .default = PC2_prev))
+
+compplot_trajectory <- 
+  ggplot(plot_data1 %>% 
+           mutate(experiment = paste(experiment, "experiment")), 
+         aes(PC1, PC2)) + 
+  facet_grid(.~experiment) +
+  theme(legend.position = "bottom") +
+  labs(x = paste("PC1 (", 100*round((CWM_pca %>% summary())$importance[2,1], 2), "%)", sep = ""),
+       y = paste("PC2 (", 100*round((CWM_pca %>% summary())$importance[2,2], 2), "%)", sep = ""),
+       color = "") +
+  scale_color_viridis(breaks = ylabels, direction = -1) +
+  geom_segment(data = plot_data2 %>%
+                 mutate(PC1 = PC1/7,
+                        PC2 = PC2/7)
+               ,  
+               xend  = 0, 
+               yend  = 0, 
+               arrow = arrow(type   = "closed", 
+                             end    = "first", 
+                             length = unit(0.03, "npc")), 
+               size  = 0.5, color = "grey" ) +
+  geom_text(data = plot_data2 %>%
+              mutate(PC1 = PC1/7,
+                     PC2 = PC2/7)
+            ,  
+            aes(label = column), 
+            hjust = c(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0),
+            nudge_x = c(+0.1, -0.1, +0.1, +0.1, -0.1, +0.1),
+            fontface = "bold", 
+            # size = 2.108759,
+            size = 4, color = "grey") + 
+  geom_point(data = centers %>% 
+               mutate(experiment = paste(experiment, "experiment")),
+             aes(y = PC2, x = PC1, color = Year)) + 
+  geom_text_repel(data = centers%>% 
+                    mutate(experiment = paste(experiment, "experiment")),
+                  aes(y = PC2, x = PC1, color = Year, label = Year)) +
+  geom_segment(data = centers %>% 
+                 mutate(experiment = paste(experiment, "experiment")) %>% 
+                 filter(!Year %in% 2008),
+               aes(yend = PC2, xend = PC1, y = PC2_prev, x = PC1_prev, color = Year), 
+               arrow=arrow(length=unit(0.3,"cm")))
+
+
+#### trajectory through time - detail ####
 centers2 = data.frame(PC1 = numeric(), 
                       PC2 = numeric(), 
                       PC1_prev = numeric(), 
@@ -366,7 +462,9 @@ for (i in mybreaks){
   }
 }
 
-#### -> FIGURE S1 ####
+
+
+
 compplot_trajectory_details <-ggplot(plot_data1 %>%
                                        mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))), 
                                      aes(PC1, PC2)) + 
@@ -437,7 +535,73 @@ compplot_trajectory_details <-ggplot(plot_data1 %>%
                arrow=arrow(length=unit(0.2,"cm"),  type = "closed"), size = 0.6)
 
 
-#### -> FIGURE 1b ####
+compplot_trajectory_details2 <- ggplot(plot_data1 %>%
+                                         mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))), 
+                                       aes(PC1, PC2)) + 
+  facet_grid(experiment~ Treatment,
+             labeller = labeller(Treatment = c("Control" = "Control",
+                                               "Fenced" = "Fenced",
+                                               "Insecticide" = "Insecticide",
+                                               "SoilDrenchFungicide" = "Soil Drench Fungicide",
+                                               "FoliarFungicide" = "Foliar Fungicide",
+                                               "AllPesticides" = "All Pesticides"),
+                                 experiment = c("Biodiversity" = "Biodiversity experiment",
+                                                "Oldfield" = "Oldfield experiment"))) +
+  theme(legend.position = "bottom") +
+  labs(x = paste("PC1 (", 100*round((CWM_pca %>% summary())$importance[2,1], 2), "%)", sep = ""),
+       y = paste("PC2 (", 100*round((CWM_pca %>% summary())$importance[2,2], 2), "%)", sep = ""),
+       color = "") +
+  scale_color_viridis(breaks = ylabels, direction = -1) +
+  geom_segment(data = expand_grid(plot_data2, 
+                                  Treatment = c("Control", "Fenced",
+                                                "Insecticide", 
+                                                "SoilDrenchFungicide", 
+                                                "FoliarFungicide", "AllPesticides"),
+                                  experiment = c("Biodiversity", "Oldfield")) %>%
+                 mutate(PC1 = PC1/4,
+                        PC2 = PC2/4)%>%
+                 mutate(Treatment = factor(Treatment, 
+                                           levels = c("Control", "Fenced", 
+                                                      "Insecticide", 
+                                                      "SoilDrenchFungicide", 
+                                                      "FoliarFungicide", "AllPesticides"))) %>%
+                 filter(!(Treatment %in% "Fenced" & experiment %in% "Biodiversity")),
+               xend  = 0, 
+               yend  = 0, 
+               arrow = arrow(type   = "closed", 
+                             end    = "first", 
+                             length = unit(0.03, "npc")), 
+               size  = 0.5, color = "grey") +
+  geom_text(data = expand_grid(plot_data2, 
+                               Treatment = c("Control", "Fenced", "Insecticide", 
+                                             "SoilDrenchFungicide", "FoliarFungicide",
+                                             "AllPesticides"),
+                               experiment = c("Biodiversity", "Oldfield")) %>%
+              mutate(PC1 = PC1/4,
+                     PC2 = PC2/4,
+                     hjuster = ifelse(column %in% c("Tissue N", "Seed mass"), 1, 0))%>%
+              mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced",
+                                                              "Insecticide", 
+                                                              "SoilDrenchFungicide", 
+                                                              "FoliarFungicide", 
+                                                              "AllPesticides")))%>%
+              filter(!(Treatment %in% "Fenced" & experiment %in% "Biodiversity")),
+            aes(label = column, hjust = hjuster),
+            nudge_x = c(rep(0.1, 11), rep(-0.1, 11), rep(0.1, 22), rep(-0.1, 11), rep(0.1,11)),
+            # fontface = "bold",
+            size = 2.108759, color = "grey") +
+  # size = 4) +
+  geom_point(data = centers2%>%
+               mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))), 
+             aes(y = PC2, x = PC1, color = Year), size = 2) + 
+  geom_segment(data = centers_trajectory %>% 
+                 pivot_wider(id_cols = c(experiment, Treatment), values_from = c(PC1, PC2), names_from= Year)%>%
+                 mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))),
+               aes(yend = PC2_2024, xend = PC1_2024, y = PC2_2009, x = PC1_2009), 
+               arrow=arrow(length=unit(0.2,"cm"),  type = "closed"), size = 0.6)
+
+
+
 compplot_trajectory_details3 <-  ggplot(plot_data1 %>% 
            mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))), 
        aes(PC1, PC2)) + 
@@ -490,9 +654,6 @@ compplot_trajectory_details3 <-  ggplot(plot_data1 %>%
   geom_point(data = centers2%>%
                mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))), 
              aes(y = PC2, x = PC1, color = Treatment, alpha = Year), size = 2) + 
-  # ggrepel::geom_text_repel(data = centers2%>%
-  #                            mutate(Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))),
-  # aes(y = PC2, x = PC1, color = Year, label = Year)) + 
   geom_hline(yintercept = 0, linetype = "dotted", color ="lightgrey") +
   geom_vline(xintercept = 0, linetype = "dotted", color ="lightgrey") +
   geom_segment(data = centers_trajectory %>%
@@ -502,7 +663,7 @@ compplot_trajectory_details3 <-  ggplot(plot_data1 %>%
                arrow=arrow(length=unit(0.25,"cm"),  type = "closed"), size = 1.5, show.legend = FALSE)
 
 
-rm(plot_data2, i, subs1, subs2, centers2, xx, yy, j,
+rm(plot_data2, i, subs1, subs2, centers, centers2, xx, yy, j,
    subs3, subs4, k, centers_trajectory)
 
 
@@ -709,14 +870,12 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
     kable_paper()
   
   
-  #### -> Tables S3,5,7,9,11,13,15 ####
   AIC_header <-  rbind.data.frame("AIC", 
                                   AIC(lin_mod_b, lin_mod_b_L, lin_mod_b_F, lin_mod_b_C3, lin_mod_b_C4) %>%
                                               round(0) %>%
                                               data.frame %>%
                                               select(AIC)) %>%
     cbind.data.frame(c(1, rep(2, 5)))
-  
   
   anova_for_print_FG_Bio[[i]] <- car::Anova(lin_mod_b) %>% 
     data.frame() %>%
@@ -821,11 +980,10 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
                                ranefs = t2)
   
   ### emmeans pairwise ####
-  # treatment_effects_Bio[[i]] <- (emmeans(lin_mod_b,  pairwise ~ Treatment))$contrasts %>%
+  # treatment_effects_Bio[[i]] <- (emmeans(lin_mod_b,  pairwise ~ Treatment, adjust = "bonferroni"))$contrasts %>%
   #   data.frame()
   
   ### plots ####
-  #### -> FIGURE S2-4,9a ####
   fig_TY <- expand_grid(Year1 = c(1:16),
               Treatment = c("Control",
                             "Insecticide",
@@ -870,7 +1028,6 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
                fill = NA,
                size = 2.108759)
   
-  #### -> FIGURE S2-4,9e ####
   fig_SRY <- ggpredict(mods_Bio[[i]], terms = c("Year1 [1:16, by = 5]", "logNumSp [1.3:3.6 by =0.2]")) %>%
     data.frame() %>%
     rename("Year1" = "x",
@@ -901,7 +1058,7 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
                fill = NA,
                size = 2.108759)
   
-  #### -> FIGURE S2-4,9c ####
+  
   fig_SRT <- ggpredict(mods_Bio[[i]], terms = c("Treatment", "logNumSp [1.3:3.6 by =0.2]")) %>%
     data.frame() %>%
     rename("Treatment" = "x",
@@ -987,7 +1144,6 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
   
   
   ### plots
-  #### -> FIGURE S2-4,9b ####
   fig_FG_TY <- expand_grid(Year1 = c(1:16),
                            Treatment = c("Control",
                                          "Insecticide",
@@ -1022,20 +1178,8 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
     scale_color_manual(breaks = mybreaks, labels= mylabels, values= myvalues)+
     scale_x_continuous(breaks = ylabels) +
     geom_line() +
-    geom_line(aes(y=full_lb), linetype="dotted") #+
-  # geom_label(label = (anova_Bio %>%
-  #                       filter(trait %in% i) %>%
-  #                       filter(Var %in% c("Treatment", "Year1", "Treatment:Year1")) %>%
-  #                       select(print) %>%
-  #                       summarize(print = paste(print, collapse = "\n")))$print,
-  #            color = "black",
-  #            x = -Inf, hjust = 0,
-  #            y = Inf, vjust = 1,
-  #            label.size = 0,
-  #            fill = NA,
-  #            size = 2.108759)
+    geom_line(aes(y=full_lb), linetype="dotted") 
   
-  #### -> FIGURE S2-4,9f ####
   fig_FG_SRY <- ggpredict(FG_mods_Bio[[i]][[lowest_AIC_model$model]], terms = c("Year1 [1:16, by = 5]", "logNumSp [1.3:3.6 by =0.2]")) %>%
     data.frame() %>%
     rename("Year1" = "x",
@@ -1052,22 +1196,9 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
     scale_color_viridis(breaks = ybreaks,
                         labels = ylabels,
                         direction = -1)+
-    scale_x_continuous(breaks = c(1, 4, 16, 32)) +
-    geom_line() #+
-  # geom_label(label = (anova_Bio %>%
-  #                       filter(trait %in% i) %>%
-  #                       filter(Var %in% c("logNumSp", "Year1",  "logNumSp:Year1")) %>%
-  #                       select(print) %>%
-  #                       summarize(print = paste(print, collapse = "\n")))$print,
-  #            color = "black",
-  #            x = -Inf, hjust = 0,
-  #            y = Inf, vjust = 1,
-  #            label.size = 0,
-  #            fill = NA,
-  #            size = 2.108759)
+    scale_x_continuous(breaks = c(1, 4, 16, 32))
   
   
-  #### -> FIGURE S2-4,9d ####
   fig_FG_SRT <- ggpredict(FG_mods_Bio[[i]][[lowest_AIC_model$model]], terms = c("Treatment", "logNumSp [1.3:3.6 by =0.2]")) %>%
     data.frame() %>%
     rename("Treatment" = "x",
@@ -1083,18 +1214,7 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
          x = "Species richness") +
     scale_color_manual(values=myvalues, breaks=mybreaks, labels=mylabels)+
     scale_x_continuous(breaks = c(1, 4, 16, 32)) +
-    geom_line() #+
-  # geom_label(label = (anova_Bio %>%
-  #                       filter(trait %in% i) %>%
-  #                       filter(Var %in% c("logNumSp", "Treatment",  "Treatment:logNumSp")) %>%
-  #                       select(print) %>%
-  #                       summarize(print = paste(print, collapse = "\n")))$print,
-  #            color = "black",
-  #            x = -Inf, hjust = 0,
-  #            y = Inf, vjust = 1,
-  #            label.size = 0,
-  #            fill = NA,
-  #            size = 2.108759)
+    geom_line() 
   
   fig_FG_TYSR <- ggpredict(FG_mods_Bio[[i]][[lowest_AIC_model$model]], terms = c("logNumSp [1.3:3.6 by =0.2]", "Treatment", "Year1 [1:16, by = 5]")) %>% 
     data.frame() %>%
@@ -1114,20 +1234,7 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
          x = "Species richness",
          color = "Treatment",
          fill = "Treatment") +
-    geom_line() #+
-  # geom_label(data = cbind.data.frame(label = (anova_Bio %>% filter(trait %in% i & Var %in% "Treatment:logNumSp:Year1"))$print,
-  #                                    x = -Inf,
-  #                                    y = Inf,
-  #                                    facet = 2009),
-  #            aes(y = y, x = x, label = label),
-  #            color = "black",
-  #            # x = -Inf,
-  #            hjust = 0,
-  #            # y = Inf,
-  #            vjust = 1,
-  #            label.size = 0,
-  #            fill = NA,
-  #            size = 2.108759)
+    geom_line()
   
   plots_FG_Bio[[i]] <- list(Treatment_Year = fig_FG_TY,
                             SR_Year = fig_FG_SRY,
@@ -1141,7 +1248,6 @@ rm(df, lin_mod_b, lin_mod_b_L, lin_mod_b_F, lin_mod_b_C3, lin_mod_b_C4, t1, t2,
    fig_FG_TYSR, AIC_header, lowest_AIC_model)
 
 
-#### -> TABLE S1 ####
 all_anova_for_print_Bio <- anova_Bio %>%
   mutate(P_print = cell_spec(P_print, bold = ifelse(p < 0.05, TRUE, FALSE)) ) %>%
   mutate(P_print = gsub(P_print,
@@ -1266,7 +1372,7 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
   
   
   
-  #### -> Tables S4,6,8,10,12,14,16 ####
+  
   AIC_header <-  rbind.data.frame("AIC", 
                                   AIC(lin_mod_b, lin_mod_b_L, lin_mod_b_F, lin_mod_b_C3, lin_mod_b_C4) %>%
                                     round(0) %>%
@@ -1370,12 +1476,7 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
                               ranefs = t2)
   
   
-  ### emmeans pairwise ####
-  # treatment_effects_OF[[i]] <- (emmeans(lin_mod_b,  pairwise ~ Treatment))$contrasts %>%
-  #   data.frame()
-  
   ### plots ####
-  #### -> Figure S5-7,10a ####
   fig_TY <- expand_grid(Year1 = c(1:16),
                         Treatment = c("Control",
                                       "Fenced",
@@ -1428,7 +1529,6 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
   
   ### plots of functional group model with lowest AIC ####
   
-  #### -> Figure S5-7,10b ####
   
   # find functional group model with lowest AIC
   lowest_AIC_model <- cbind.data.frame(
@@ -1479,17 +1579,6 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
     scale_x_continuous(breaks = ylabels) +
     geom_line() +
     geom_line(aes(y=full_lb), linetype="dotted") 
-    # geom_label(label = (anova_OF %>%
-    #                       filter(trait %in% i) %>%
-    #                       filter(Var %in% c("Treatment", "Year1", "Treatment:Year1")) %>%
-    #                       select(print) %>%
-    #                       summarize(print = paste(print, collapse = "\n")))$print,
-    #            color = "black",
-    #            x = -Inf, hjust = 0,
-    #            y = Inf, vjust = 1,
-    #            label.size = 0,
-    #            fill = NA,
-    #            size = 2.108759)
   
   
   plots_FG_OF[[i]] <- fig_FG_TY
@@ -1499,7 +1588,7 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
 rm(df, lin_mod_b, lin_mod_b_L, lin_mod_b_F, lin_mod_b_C3, lin_mod_b_C4, t1, t2,fig_FG_TY,
    i, fig_TY, AIC_header, lowest_AIC_model)
 
-#### -> Table S2 ####
+
 all_anova_for_print_OF <- anova_OF %>%
   mutate(P_print = cell_spec(P_print, bold = ifelse(p < 0.05, TRUE, FALSE)) ) %>%
   mutate(P_print = gsub(P_print,
@@ -1530,20 +1619,19 @@ all_anova_for_print_OF <- anova_OF %>%
 ### emmeans ####
 posthoc_Bio <- list()
 for (i in c("Nmass", "LeafArea", "LMA", "LDMC", "PlantHeight", "DiasporeMass", "invsimpson", "PC1", "PC2")){
-posthoc_Bio[[i]] <- (emmeans(mods_Bio[[i]], pairwise ~ Treatment|Year1, at = list(Year1 = seq(1,16, 0.2))))$contrasts
+posthoc_Bio[[i]] <- (emmeans(mods_Bio[[i]], pairwise ~ Treatment|Year1, at = list(Year1 = seq(1,16, 0.2)), adjust = "bonferroni"))$contrasts
 }
 
 posthoc_OF <- list()
 for (i in c("Nmass", "LeafArea", "LMA", "LDMC", "PlantHeight", "DiasporeMass", "invsimpson", "PC1", "PC2")){
-  posthoc_OF[[i]] <- (emmeans(mods_OF[[i]], pairwise ~ Treatment|Year1, at = list(Year1 = seq(1,16, 0.2))))$contrasts
+posthoc_OF[[i]] <- (emmeans(mods_OF[[i]], pairwise ~ Treatment|Year1, at = list(Year1 = seq(1,16, 0.2)), adjust = "bonferroni"))$contrasts
 }
 
 
 ### Treatment effect ~ Time ####
 plots_TrtEff_Bio <- list()
-plots_TrtEff_OF <- list()
-plots_TrtEff <- list()
-
+plots_TrtEff_OF  <- list()
+plots_TrtEff     <- list()
 
 for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "invsimpson", "PC1", "PC2")){
   df_Bio <- posthoc_Bio[i] %>% 
@@ -1565,7 +1653,54 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
            Treatment = gsub(contrast, pattern = "Control - ", replacement = "")) 
   
   
-  #### -> Figure S8 ####
+  plots_TrtEff_Bio[[i]] <- df_Bio %>%
+    
+    ggplot(aes(y = Treatment_effect, x = Year, linetype = Significance, color = Treatment)) +
+    theme(axis.title.x = element_blank())+
+    scale_color_manual(breaks = mybreaks, labels = mylabels, values=myvalues) +
+    scale_x_continuous(breaks = ylabels) +
+    scale_linetype_manual(breaks = sigbreaks, values = sigvalues) +
+    labs(title = "Biodiversity experiment",
+         y = traitlabels_unit_2[[i]]) +
+    geom_line() +
+    geom_abline(intercept = 0, slope = 0, color = "grey")+
+    geom_label(label = (anova_Bio %>%
+                          filter(trait %in% i) %>%
+                          filter(Var %in% c("Treatment", "Year1", "Treatment:Year1")) %>%
+                          select(print) %>%
+                          summarize(print = paste(print, collapse = "\n")))$print,
+               color = "black",
+               x = -Inf, hjust = 0,
+               y = Inf, vjust = 1,
+               label.size = 0,
+               fill = NA,
+               size = 2.108759)
+  
+  
+  plots_TrtEff_OF[[i]] <- df_OF %>%
+    
+    ggplot(aes(y = Treatment_effect, x = Year, linetype = Significance, color = Treatment)) +
+    theme(axis.title.x = element_blank())+
+    scale_color_manual(breaks = mybreaks, labels = mylabels, values=myvalues) +
+    scale_x_continuous(breaks = ylabels) +
+    scale_linetype_manual(breaks = sigbreaks, values = sigvalues) +
+    labs(title = "Oldfield experiment",
+         y = traitlabels_unit_2[[i]]) +
+    geom_line() +
+    geom_abline(intercept = 0, slope = 0, color = "grey") +
+    geom_abline(intercept = 0, slope = 0, color = "grey")+
+    geom_label(label = (anova_OF %>%
+                          filter(trait %in% i) %>%
+                          filter(Var %in% c("Treatment", "Year1", "Treatment:Year1")) %>%
+                          select(print) %>%
+                          summarize(print = paste(print, collapse = "\n")))$print,
+               color = "black",
+               x = -Inf, hjust = 0,
+               y = Inf, vjust = 1,
+               label.size = 0,
+               fill = NA,
+               size = 2.108759)
+  
   plots_TrtEff[[i]] <- df_Bio %>%
     mutate(experiment = "Biodiversity") %>%
     rbind.data.frame(df_OF %>% 
@@ -1604,7 +1739,6 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
                label.size = 0,
                fill = NA,
                size = 2.108759)
-
   }
 
 rm(i, df_Bio, df_OF)
@@ -1648,7 +1782,7 @@ for (i in c("Nmass", "LeafArea", "LMA", "LDMC", "PlantHeight", "DiasporeMass", "
     ) %>%
     mutate(Year = Year1+2008)
   
-  #### -> Figure 2 ####
+  
   plots_effect_correlations[[i]] <- df %>%
     filter(Year1 %in% 16) %>%
     
@@ -1681,13 +1815,355 @@ for (i in c("Nmass", "LeafArea", "LMA", "LDMC", "PlantHeight", "DiasporeMass", "
       stat_cor(label.x.npc = "left", label.y.npc = "bottom")
   
   
+  plots_effect_correlations2[[i]] <- df %>%
+    
+    ggplot(aes(y = Oldfield.Treatment_effect, 
+               x = Biodiversity.Treatment_effect)) +
+    facet_wrap(~Year) +
+    labs(y = "Treatment effect \u00B1 SE\nin the Oldfield experiment",
+         x = "Treatment effect \u00B1 SE\nin the Biodiversity experiment",
+         title = traitlabels[[i]]) +
+    geom_rect(ymin = 0, xmin = 0, ymax =  (-1)*(rect_helper[[i]]), xmax = rect_helper[[i]], fill = "#FAFAFA") +
+    geom_rect(ymin = 0, xmin = 0, ymax =  rect_helper[[i]], xmax = (-1)*(rect_helper[[i]]), fill = "#FAFAFA") +
+    geom_rect(ymin = 0, xmin = 0, ymax =  rect_helper[[i]], xmax = rect_helper[[i]], fill = "#F5F5F5") +
+    geom_hline(yintercept = 0, color = "grey", linetype = "dotted")+
+    geom_vline(xintercept = 0, color = "grey", linetype = "dotted") +
+    # geom_abline(intercept = 0, slope = 1, color = "grey") +
+    # geom_smooth(method = "lm", color = "grey", alpha = 0.2, se = F)+
+    scale_color_manual(breaks = mybreaks, values=myvalues, labels = mylabels) +
+    scale_linetype_manual(breaks = sigbreaks, values = sigvalues) +
+    scale_size_manual(breaks = sigbreaks, values = sigvalues2) +
+    geom_point(aes(color = Treatment)) +
+    geom_errorbar(aes(ymin = Oldfield.Treatment_effect-Oldfield.SE, 
+                      ymax = Oldfield.Treatment_effect+Oldfield.SE,
+                      color = Treatment,
+                      linetype = Oldfield.Significance,
+                      size = Oldfield.Significance)) +
+    geom_errorbarh(aes(xmin = Biodiversity.Treatment_effect- Biodiversity.SE,
+                       xmax = Biodiversity.Treatment_effect+ Biodiversity.SE,
+                       color = Treatment,
+                       linetype = Biodiversity.Significance,
+                       size = Biodiversity.Significance)) +
+    stat_cor()
 }
 
 rm(i, df, rect_helper)
 
 
+##__________________________________________________________________________####
+
+# BB: FUNCTIONAL GROUP ABUNDANCE ####
+fg_mods_Bio <- list()
+fg_anova_Bio <- data.frame(Var = c(),
+                        Functional.group = c(), 
+                        X2    = c(),
+                        DF    = c(),
+                        p     = c(),
+                        P_print   = c(),
+                        X2_print  = c(),
+                        stars     = c(),
+                        Var_print = c())
+fg_plots_Bio <- list()
+
+for(i in c("C3", "C4", "F", "L")){
+ 
+  ### data ####
+  df <- CWM_Bio %>%
+    select(BigBioPlot, Plot, Treatment, Year, Year1, logNumSp, L_biom, F_biom, C3_biom, C4_biom) %>%
+    rename("y_b" = paste(i, "biom", sep = "_"))  %>%
+    mutate(Treatment=`contrasts<-`(factor(Treatment), , BBc))
+  
+  ### model ####
+  lin_mod_b = lmer(y_b ~ Treatment * logNumSp * Year1 + (1|BigBioPlot/Plot) + (1|Year), data = df)
+  fg_mods_Bio[[i]] <- lin_mod_b
+
+  ### anova table ####
+  fg_anova_Bio <- rbind.data.frame(fg_anova_Bio,
+                                car::Anova(lin_mod_b) %>% 
+                                  data.frame() %>%
+                                  rename("X2" = "Chisq",
+                                         "DF" = "Df",
+                                         "p" = "Pr..Chisq.") %>%
+                                  rownames_to_column("Var") %>%
+                                  mutate(Functional.group = i)  %>%
+                                  mutate(P_print2 = case_when(p < 0.001 ~ "p < 0.001", .default = paste("p =", round(p, digits = 3))),
+                                         P_print = case_when(p < 0.001 ~ "<0.001", .default = paste(round(p, digits = 3))),
+                                         X2_print = round(X2, digits = 4),
+                                         stars = case_when(p < 0.001 ~ "***",
+                                                           p > 0.001 & p <0.01 ~ "**",
+                                                           p > 0.01  & p < 0.05 ~ "*",
+                                                           p > 0.05 & p <0.1 ~ ".",
+                                                           .default = ""),
+                                         Var_print = case_when(Var %in% "Treatment" ~ "Treatment (T)",
+                                                               Var %in% "logNumSp"  ~ "log Species Richness (SR)",
+                                                               Var %in% "Year1"     ~ "Year (Y)",
+                                                               Var %in% "I(Year1^2)" ~ "Year^2 (Y2)",
+                                                               Var %in% "Treatment:logNumSp"   ~ "T x SR",
+                                                               Var %in% "Treatment:Year1"      ~ "T x Y",
+                                                               Var %in% "Treatment:I(Year1^2)" ~ "T x Y2",
+                                                               Var %in% "logNumSp:Year1"       ~ "SR x Y",
+                                                               Var %in% "logNumSp:I(Year1^2)"  ~ "SR x Y2",
+                                                               Var %in% "Treatment:logNumSp:Year1"      ~ "T x SR x Y",
+                                                               Var %in% "Treatment:logNumSp:I(Year1^2)" ~ "T x SR x Y2"),
+                                         print = paste(Var_print, ": ", P_print2, stars, sep = "")) 
+  ) 
+  
+  ### plots ####
+  fig_TY <- expand_grid(Year1 = c(1:16),
+                        Treatment = c("Control",
+                                      "Insecticide",
+                                      "SoilDrenchFungicide",
+                                      "FoliarFungicide",
+                                      "AllPesticides")) %>%
+    mutate(logNumSp = mean(log(c(1, 4, 16, 32))),
+           Year = Year1+2008) %>%
+    mutate(fixed_lb = predict(fg_mods_Bio[[i]],  newdata = . , re.form = NA)) %>%
+    
+    merge(
+      expand_grid(Year1 = c(1:16),
+                  Treatment = c("Control",
+                                "Insecticide",
+                                "SoilDrenchFungicide",
+                                "FoliarFungicide",
+                                "AllPesticides")) %>%
+        mutate(logNumSp = mean(log(c(1, 4, 16, 32))),
+               Year = Year1+2008) %>%
+        filter(!Year %in% c(2019, 2020)) %>%
+        mutate(full_lb = predict(fg_mods_Bio[[i]],  newdata = . , re.form = ~(1|Year))),
+      
+      all = T, by = c("Year1", "Treatment", "logNumSp", "Year")
+    ) %>%
+    
+    ggplot(aes(y = fixed_lb, x = Year, color = Treatment)) +
+    labs(title = "Biodiversity experiment",
+         y = paste(i, "biomass") )+
+    scale_color_manual(breaks = mybreaks, labels= mylabels, values= myvalues)+
+    scale_x_continuous(breaks = ylabels) +
+    geom_line() +
+    geom_line(aes(y=full_lb), linetype="dotted") +
+    geom_label(label = (fg_anova_Bio %>%
+                          filter(Functional.group %in% i) %>%
+                          filter(Var %in% c("Treatment", "Year1", "Treatment:Year1")) %>%
+                          select(print) %>%
+                          summarize(print = paste(print, collapse = "\n")))$print,
+               color = "black",
+               x = -Inf, hjust = 0,
+               y = Inf, vjust = 1,
+               label.size = 0,
+               fill = NA,
+               size = 2.108759)
+  
+  fig_SRY <- ggpredict(fg_mods_Bio[[i]], terms = c("Year1 [1:16, by = 5]", "logNumSp [1.3:3.6 by =0.2]")) %>%
+    data.frame() %>%
+    rename("Year1" = "x",
+           "fixed_lb" = "predicted",
+           "logNumSp" = "group") %>%
+    mutate(logNumSp = as.numeric(paste(logNumSp)),
+           NumSp = exp(logNumSp)) %>%
+    select(Year1, NumSp, fixed_lb) %>%
+    
+    ggplot(aes(y = fixed_lb, x = NumSp, color = Year1, group = Year1)) +
+    labs(title = "Biodiversity experiment",
+         y = paste(i, "biomass"), 
+         x = "Species richness") +
+    scale_color_viridis(breaks = ybreaks,
+                        labels = ylabels,
+                        direction = -1)+
+    scale_x_continuous(breaks = c(1, 4, 16, 32)) +
+    geom_line() +
+    geom_label(label = (fg_anova_Bio %>%
+                          filter(Functional.group %in% i) %>%
+                          filter(Var %in% c("logNumSp", "Year1",  "logNumSp:Year1")) %>%
+                          select(print) %>%
+                          summarize(print = paste(print, collapse = "\n")))$print,
+               color = "black",
+               x = -Inf, hjust = 0,
+               y = Inf, vjust = 1,
+               label.size = 0,
+               fill = NA,
+               size = 2.108759)
+  
+  
+  fig_SRT <- ggpredict(fg_mods_Bio[[i]], terms = c("Treatment", "logNumSp [1.3:3.6 by =0.2]")) %>%
+    data.frame() %>%
+    rename("Treatment" = "x",
+           "fixed_lb" = "predicted",
+           "logNumSp" = "group") %>%
+    mutate(logNumSp = as.numeric(paste(logNumSp)),
+           NumSp = exp(logNumSp)) %>%
+    select(Treatment, NumSp, fixed_lb) %>%
+    
+    ggplot(aes(y = fixed_lb, x = NumSp, color = Treatment)) +
+    labs(title = "Biodiversity experiment",
+         y = paste(i, "biomass"), 
+         x = "Species richness") +
+    scale_color_manual(values=myvalues, breaks=mybreaks, labels=mylabels)+
+    scale_x_continuous(breaks = c(1, 4, 16, 32)) +
+    geom_line() +
+    geom_label(label = (fg_anova_Bio %>%
+                          filter(Functional.group %in% i) %>%
+                          filter(Var %in% c("logNumSp", "Treatment",  "Treatment:logNumSp")) %>%
+                          select(print) %>%
+                          summarize(print = paste(print, collapse = "\n")))$print,
+               color = "black",
+               x = -Inf, hjust = 0,
+               y = Inf, vjust = 1,
+               label.size = 0,
+               fill = NA,
+               size = 2.108759)
+  
+  fig_TYSR <- ggpredict(fg_mods_Bio[[i]], terms = c("logNumSp [1.3:3.6 by =0.2]", "Treatment", "Year1 [1:16, by = 5]")) %>% 
+    data.frame() %>%
+    mutate(facet = as.numeric(paste(facet)) + 2008) %>%
+    ggplot(aes(y = predicted, x = exp(x), color = group, fill = group)) +
+    theme(legend.position = "bottom")+
+    facet_grid(.~facet) +
+    scale_color_manual(breaks = mybreaks,
+                       values = myvalues,
+                       labels = mylabels) +
+    scale_fill_manual(breaks = mybreaks,
+                      values = myvalues,
+                      labels = mylabels) +
+    scale_x_continuous(breaks = c(1, 4, 16, 32)) +
+    labs(title = "Biodiversity experiment",
+         y = paste(i, "biomass"),
+         x = "Species richness",
+         color = "Treatment",
+         fill = "Treatment") +
+    geom_line() +
+    geom_label(data = cbind.data.frame(label = (fg_anova_Bio %>% filter(Functional.group %in% i & Var %in% "Treatment:logNumSp:Year1"))$print,
+                                       x = -Inf,
+                                       y = Inf,
+                                       facet = 2009),
+               aes(y = y, x = x, label = label),
+               color = "black",
+               # x = -Inf,
+               hjust = 0,
+               # y = Inf,
+               vjust = 1,
+               label.size = 0,
+               fill = NA,
+               size = 2.108759)
+  
+  fg_plots_Bio[[i]] <- list(Treatment_Year = fig_TY,
+                         SR_Year = fig_SRY,
+                         Treatment_SR = fig_SRT,
+                         Treatment_SR_Year = fig_TYSR)
+}
+
+rm(i, df, fig_TY, fig_SRY, fig_SRT, fig_TYSR, lin_mod_b)
+
+##__________________________________________________________________________####
+
+# OF: FUNCTIONAL GROUP ABUNDANCE ####
+fg_mods_OF <- list()
+fg_anova_OF <- data.frame(Var = c(),
+                           Functional.group = c(), 
+                           X2    = c(),
+                           DF    = c(),
+                           p     = c(),
+                           P_print   = c(),
+                           X2_print  = c(),
+                           stars     = c(),
+                           Var_print = c())
+fg_plots_OF <- list()
+
+for(i in c("C3", "C4", "F", "L")){
+  
+  ### data ####
+  df <- CWM_OF %>% 
+    select(Block, Plot, Treatment, Year, Year1, C3_biom, C4_biom, F_biom, L_biom) %>%
+    rename("y_b" = paste(i, "biom", sep = "_")) %>%
+    mutate(Treatment=`contrasts<-`(factor(Treatment), , OFc1))
+  
+  
+  ### model ####
+  lin_mod_b = lmer(y_b ~ Treatment * Year1                + (1|Block/Plot) + (1|Year), data = df)
+  fg_mods_OF[[i]] <- lin_mod_b
+  
+  ### anova table ####
+  fg_anova_OF <- rbind.data.frame(fg_anova_OF,
+                               car::Anova(lin_mod_b) %>% 
+                                 data.frame() %>%
+                                 rename("X2" = "Chisq",
+                                        "DF" = "Df",
+                                        "p" = "Pr..Chisq.") %>%
+                                 rownames_to_column("Var") %>%
+                                 mutate(Functional.group = i)  %>%
+                                 mutate(P_print2 = case_when(p < 0.001 ~ "p < 0.001", .default = paste("p =", round(p, digits = 3))),
+                                        P_print = case_when(p < 0.001 ~ "<0.001", .default = paste(round(p, digits = 3))),
+                                        X2_print = round(X2, digits = 4),
+                                        stars = case_when(p < 0.001 ~ "***",
+                                                          p > 0.001 & p <0.01 ~ "**",
+                                                          p > 0.01  & p < 0.05 ~ "*",
+                                                          p > 0.05 & p <0.1 ~ ".",
+                                                          .default = ""),
+                                        Var_print = case_when(Var %in% "Treatment" ~ "Treatment (T)",
+                                                              Var %in% "logNumSp"  ~ "log Species Richness (SR)",
+                                                              Var %in% "Year1"     ~ "Year (Y)",
+                                                              Var %in% "I(Year1^2)" ~ "Year^2 (Y2)",
+                                                              Var %in% "Treatment:logNumSp"   ~ "T x SR",
+                                                              Var %in% "Treatment:Year1"      ~ "T x Y",
+                                                              Var %in% "Treatment:I(Year1^2)" ~ "T x Y2",
+                                                              Var %in% "logNumSp:Year1"       ~ "SR x Y",
+                                                              Var %in% "logNumSp:I(Year1^2)"  ~ "SR x Y2",
+                                                              Var %in% "Treatment:logNumSp:Year1"      ~ "T x SR x Y",
+                                                              Var %in% "Treatment:logNumSp:I(Year1^2)" ~ "T x SR x Y2"),
+                                        print = paste(Var_print, ":", P_print2, stars)) 
+  ) 
+  
+  ### plot ####
+  fig_TY <- expand_grid(Year1 = c(1:16),
+  Treatment = c("Control",
+                "Fenced",
+                "Insecticide",
+                "SoilDrenchFungicide",
+                "FoliarFungicide",
+                "AllPesticides")) %>%
+  mutate(logNumSp = mean(log(c(1, 4, 16, 32))),
+         Year = Year1+2008) %>%
+  mutate(fixed_lb = predict(fg_mods_OF[[i]],  newdata = . , re.form = NA)) %>%
+  
+  merge(
+    expand_grid(Year1 = c(1:16),
+                Treatment = c("Control",
+                              "Fenced",
+                              "Insecticide",
+                              "SoilDrenchFungicide",
+                              "FoliarFungicide",
+                              "AllPesticides")) %>%
+      mutate(logNumSp = mean(log(c(1, 4, 16, 32))),
+             Year = Year1+2008) %>%
+      filter(!Year %in% c(2019, 2020)) %>%
+      mutate(full_lb = predict(fg_mods_OF[[i]],  newdata = . , re.form = ~(1|Year))),
+    
+    all = T, by = c("Year1", "Treatment", "logNumSp", "Year")
+  ) %>%
+  
+  ggplot(aes(y = fixed_lb, x = Year, color = Treatment)) +
+  labs(title = "Oldfield experiment",
+       y = paste(i, "biomass") )+
+  scale_color_manual(breaks = mybreaks, labels= mylabels, values= myvalues)+
+  scale_x_continuous(breaks = ylabels) +
+  geom_line() +
+  geom_line(aes(y=full_lb), linetype="dotted") +
+  geom_label(label = (fg_anova_OF %>%
+                        filter(Functional.group %in% i) %>%
+                        filter(Var %in% c("Treatment", "Year1", "Treatment:Year1")) %>%
+                        select(print) %>%
+                        summarize(print = paste(print, collapse = "\n")))$print,
+             color = "black",
+             x = -Inf, hjust = 0,
+             y = Inf, vjust = 1,
+             label.size = 0,
+             fill = NA,
+             size = 2.108759)
 
 
+fg_plots_OF[[i]] <- fig_TY
+}
+
+rm(i, df, fig_TY, lin_mod_b)
 
 ##__________________________________________________________________________####
 
@@ -1700,23 +2176,20 @@ shared_species <- sp_change %>%
   summarize(n_exp = n_distinct(exp), .groups = "drop") %>%
   filter(n_exp == 2) 
 
-# species_faces <- setNames(
-#   ifelse(unique(sp_change$Species) %in% shared_species, "bold.italic", "italic"),
-#   unique(sp_change$Species)
-# )
-
-#### -> Figure 3 ####
 heatmap <-
   sp_change %>%
-  mutate(stars = case_when(p.value > 0.1 ~ "",
+  mutate(Species = case_when(Species %in% "Achillea millefolium (lanulosa)" ~ "Achillea millefolium",
+                             Species %in%"Ambrosia artemisiifolia elatior" ~ "Ambrosia artemisiifolia", 
+                             .default=Species),
+         stars = case_when(p.value > 0.1 ~ "",
                            p.value > 0.5 ~ ".",
                            p.value > 0.01 ~ "*",
                            p.value > 0.001 ~ "**",
                            p.value < 0.001 ~ "***",
                            .default = "fuck"),
-         Species = case_when(Species %in% "Achillea millefolium (lanulosa)" ~ "Achillea millefolium",
-                             Species %in%"Ambrosia artemisiifolia elatior" ~ "Ambrosia artemisiifolia", 
-                             .default=Species)) %>%
+         highlight = case_when(p.value_vs.Control < 0.05 ~ "1",
+                           .default = "0")
+  ) %>%
   arrange(Functional.group, Species) %>%
   mutate(Species = factor(Species, unique(Species)),
          Treatment = factor(Treatment, levels = c("Control", "Fenced", "Insecticide", "SoilDrenchFungicide", "FoliarFungicide", "AllPesticides"))) %>% 
@@ -1743,13 +2216,13 @@ heatmap <-
                               "Soil drench fungicide", "All pesticides")) +
   scale_y_discrete(limits=rev) +
   labs(fill = "Change over time")+
-  geom_tile() +
+  geom_tile(aes(color = ifelse(highlight == 1, "black", NA))) +
   # geom_hline(yintercept = c(3.5, 8.5, 18.5)) +
   scale_fill_gradient2(low = '#D41159', mid = 'lightgrey', high = '#1A85FF')+
+  scale_color_identity() +
   geom_text(aes(label = stars))
 
 ### Treatment effect ####
-#### -> Figure S12 ####
 plot_sp_TrtEff_cor <-
   sp_TrtEff %>%
   filter(!grepl("Fenced", contrast)) %>%
@@ -1765,8 +2238,6 @@ plot_sp_TrtEff_cor <-
   pivot_wider(id_cols = c(Species, Functional.group, Treatment),
               values_from = c(estimate, SE, Significance),
               names_from = exp) %>%
-  filter(!(estimate_Oldfield %in% NA)) %>%
-  filter(!(estimate_Biodiversity %in% NA)) %>%
   
   ggplot(aes(y = estimate_Oldfield, x = estimate_Biodiversity, color = Treatment)) +
   facet_wrap(~Treatment,
@@ -1790,17 +2261,52 @@ plot_sp_TrtEff_cor <-
                   segment.color = 'grey',
                   segment.size = 0.2,
                   color = "grey50",
-                  force = 80
-                  ) +
+                  force = 80) +
   geom_point(aes(shape = Functional.group)) +
-  # geom_errorbar(aes(ymin = estimate_Oldfield - SE_Oldfield,
-  #                   ymax = estimate_Oldfield + SE_Oldfield,
-  #                   linetype = Significance_Biodiversity)) +
-  # geom_errorbarh(aes(xmin = estimate_Biodiversity - SE_Biodiversity,
-  #                    xmax = estimate_Biodiversity + SE_Biodiversity,
-  #                    linetype = Significance_Biodiversity)) +
   stat_cor(color = "black", aes(group = "Treatment")) 
 
+
+plot_sp_TrtEff <- list() 
+for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC")){
+  
+  df <- sp_TrtEff %>%
+    rename(x = paste(i)) %>%
+    filter(!contrast %in% NA) %>%
+    mutate(Treatment = gsub(contrast, pattern = "Control - ", replacement = "") %>%
+             factor(levels = c("Fenced", 
+                               "Insecticide",
+                               "SoilDrenchFungicide",
+                               "FoliarFungicide",
+                               "AllPesticides")),
+           Significance = case_when(p.value < 0.05 ~ "p < 0.05", .default = "p > 0.05"))
+  
+  plot_sp_TrtEff[[i]] <- df %>%
+    
+    ggplot(aes(y = estimate, x = x, color = Treatment)) +
+    theme(legend.position = c(0.01,0.99), legend.justification = c(0,1))+
+    facet_grid(exp~Treatment,
+               labeller = labeller(Treatment = c("Fenced" = "Fenced",
+                                                 "Insecticide" = "Insecticide",
+                                                 "SoilDrenchFungicide" = "Soil drench fungicide",
+                                                 "FoliarFungicide" = "Foliar fungicide",
+                                                 "AllPesticides" = "All pesticides"))) +
+    labs(x = traitlabels_unit[[i]],
+         shape = "Functional group",
+         y = "Treatment effect \u00B1 SE") +
+    guides(color = FALSE, linetype = FALSE)+
+    scale_linetype_manual(breaks = sigbreaks, values = sigvalues) +
+    scale_color_manual(breaks = mybreaks, labels = mylabels, values = myvalues) +
+    scale_shape_manual(breaks = c("C3", "C4", "F", "L"),
+                       labels = c("C3 grasses", "C4 grasses", "Non-leguminous forbs", "Legumes"),
+                       values = c(15, 16, 17, 8))+
+    geom_hline(yintercept = 0, color = "grey")  + 
+    geom_point(aes(shape = Functional.group), size=2) +
+    geom_errorbar(aes(ymin = estimate - SE, ymax = estimate + SE, linetype = Significance)) +
+    geom_smooth(method = "lm", se = F) +
+    stat_cor(color = "black", aes(group = "Treatment")) 
+}
+
+rm(i, df)
 
 
 
@@ -1876,7 +2382,7 @@ df_sp_labs <- df %>%
 
 
 
-#### -> Figure S11 ####
+
 plot_sp_TrtEff2 <-
     
     ggplot(df, aes(y = estimate, x = trait_value, color = Treatment)) +
@@ -1916,12 +2422,10 @@ plot_sp_TrtEff2 <-
 rm(df, df_sp_labs)
 
 
-    
 #___________________________________________________________________________####
-## DATA QUALITY ####
 
-### get species level data ####
-plotinfo_BigBio <- read.csv(paste(EnemyRemovalDIR, "data-raw/BigBio_All_Plots_info.csv", sep = "")) %>%
+## SPECIES LEVEL DATA ####
+plotinfo_BigBio <- read.csv("data-raw/BigBio_All_Plots_info.csv") %>%
   select(!c(Exp)) 
 
 plotinfo_Bio <- read.csv(paste(EnemyRemovalDIR, "/data-raw/E244Data_PlanFilev1.csv", sep = ""))
@@ -2003,7 +2507,7 @@ biom_ER_OF <- read.csv(paste(EnemyRemovalDIR, "/data-derived/E245_biomass_clean.
                                        "AllPesticides"))) %>%
   merge(speciesinfo %>% select(Species, Family, Functional.group), by = "Species", all.x = T)
 
-DiazTraits <- read.csv(paste(EnemyRemovalDIR, "data-raw/CDR_traits_SDaiz.csv", sep = "")) 
+DiazTraits <- read.csv("data-raw/CDR_traits_SDaiz.csv") 
 
 
 # make species filters across both cover data
@@ -2242,8 +2746,9 @@ sp_noplant <- c("Bare ground",
                 "Woody litter")
 
 
-
-### Summed relative Biomass of Species with trait value ####
+#___________________________________________________________________________####
+## DATA QUALITY ####
+# Summed relative Biomass of Species with trait value
 data_quality_Bio <- biom_ER_Bio %>%
   filter(Planted %in% "planted") %>%
   filter(!Mass.g.m.2. %in% c(0, NA, NaN)) %>%
@@ -2277,13 +2782,6 @@ data_quality_Bio <- biom_ER_Bio %>%
   group_by(BigBioPlot, PlantSpNum, Plot, Treatment, Year) %>%
   mutate(rel_biomass = Mass.g.m.2./sum(Mass.g.m.2.)) %>%
   summarize(
-    # CWM_LeafArea     = weighted.mean(Leaf_Area,     Mass.g.m.2., na.rm = T),
-    # CWM_Nmass        = weighted.mean(Nmass,         Mass.g.m.2., na.rm = T),
-    # CWM_LMA          = weighted.mean(LMA,           Mass.g.m.2., na.rm = T),
-    # CWM_PlantHeight  = weighted.mean(Plant_height,  Mass.g.m.2., na.rm = T),
-    # CWM_DiasporeMass = weighted.mean(Diaspore_mass, Mass.g.m.2., na.rm = T),
-    # CWM_LDMC         = weighted.mean(LDMC,          Mass.g.m.2., na.rm = T),
-    
     rel_biomass_Nmass        = sum(rel_biomass[!is.na(Nmass)]),
     rel_biomass_LeafArea     = sum(rel_biomass[!is.na(Leaf_Area)]),
     rel_biomass_LMA          = sum(rel_biomass[!is.na(LMA)]),
@@ -2293,6 +2791,56 @@ data_quality_Bio <- biom_ER_Bio %>%
   ) %>%
   filter(!PlantSpNum %in% 1) %>%
   ungroup()
+
+rel_biom_sp_w_trait_Bio <- data_quality_Bio %>%
+  group_by(Treatment) %>%
+  summarize(
+    rel_biomass_Nmass.sd        = sd(rel_biomass_Nmass),
+    rel_biomass_LeafArea.sd     = sd(rel_biomass_LeafArea),
+    rel_biomass_LMA.sd          = sd(rel_biomass_LMA),
+    rel_biomass_LDMC.sd         = sd(rel_biomass_LDMC),
+    rel_biomass_PlantHeight.sd  = sd(rel_biomass_PlantHeight),
+    rel_biomass_DiasporeMass.sd = sd(rel_biomass_DiasporeMass),
+    
+    rel_biomass_Nmass.mean        = mean(rel_biomass_Nmass),
+    rel_biomass_LeafArea.mean     = mean(rel_biomass_LeafArea),
+    rel_biomass_LMA.mean          = mean(rel_biomass_LMA),
+    rel_biomass_LDMC.mean         = mean(rel_biomass_LDMC),
+    rel_biomass_PlantHeight.mean  = mean(rel_biomass_PlantHeight),
+    rel_biomass_DiasporeMass.mean = mean(rel_biomass_DiasporeMass),
+  ) %>% 
+  
+  pivot_longer(cols= !Treatment) %>%
+  separate_wider_delim(name, delim = ".", names = c("trait", "measure")) %>%
+  pivot_wider(id_cols = c(Treatment, trait), names_from = measure, values_from = value) %>%
+  mutate(trait = gsub(trait, pattern = "rel_biomass_", replacement = ""),
+         trait = factor(trait, 
+                        levels = c("Nmass", "DiasporeMass", 
+                                   "PlantHeight", "LeafArea",
+                                   "LMA", "LDMC"))) %>%
+  
+  ggplot(aes(y = mean, x = trait, color = Treatment)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_color_manual(values = myvalues, breaks = mybreaks, labels = mylabels) +
+  scale_x_discrete(breaks = c("Nmass", 
+                              "DiasporeMass", 
+                              "PlantHeight", 
+                              "LeafArea", 
+                              "LMA", 
+                              "LDMC"),
+                   labels = c("CWM Tissue N [%]", 
+                              "CWM Seed mass [mg]",
+                              "CWM Plant height [m]",
+                              "CWM Leaf area ["~mm^2~"]", 
+                              "CMW LMA [g "~m^-2~"]",
+                              "CWM LDMC",
+                              "Inverse Simpson"))+
+  labs(y = "Relative biomass of species with trait value (mean +/- sd)",
+       title = "Biodiversity experiment",
+       x = element_blank()) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymax = mean + sd, ymin = mean - sd), width = 0.2, position = position_dodge(width = 0.5))
+
 
 data_quality_OF <-  biom_ER_OF %>%
   filter(!Subplot %in% "West") %>%
@@ -2332,13 +2880,6 @@ data_quality_OF <-  biom_ER_OF %>%
   group_by(Plot, Treatment, Year) %>%
   mutate(rel_biomass = Mass.g.m.2./sum(Mass.g.m.2.)) %>%
   summarize(
-    # CWM_LeafArea     = weighted.mean(Leaf_Area,     Mass.g.m.2., na.rm = T),
-    # CWM_Nmass        = weighted.mean(Nmass,         Mass.g.m.2., na.rm = T),
-    # CWM_LMA          = weighted.mean(LMA,           Mass.g.m.2., na.rm = T),
-    # CWM_PlantHeight  = weighted.mean(Plant_height,  Mass.g.m.2., na.rm = T),
-    # CWM_DiasporeMass = weighted.mean(Diaspore_mass, Mass.g.m.2., na.rm = T),
-    # CWM_LDMC         = weighted.mean(LDMC,          Mass.g.m.2., na.rm = T),
-    
     rel_biomass_Nmass        = sum(rel_biomass[!is.na(Nmass)]),
     rel_biomass_LeafArea     = sum(rel_biomass[!is.na(Leaf_Area)]),
     rel_biomass_LMA          = sum(rel_biomass[!is.na(LMA)]),
@@ -2349,236 +2890,56 @@ data_quality_OF <-  biom_ER_OF %>%
   
   ungroup()
 
-
-#___________________________________________________________________________####
-## ASSEMBLE FIGURES FROM SUBFIGURES ####
-### -> Figure 1 PCA ####
-plot_grid(
-  compplot + 
-    theme(legend.position = c(0,0), 
-          legend.justification = c(0,0), 
-          legend.margin = margin(l = 10, b = 10)), # +
-  # geom_rect(aes(xmin = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$x.range[1],
-  #               xmax = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$x.range[2], 
-  #               ymin = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$y.range[1],
-  #               ymax = ggplot_build(compplot_trajectory_details3)$layout$panel_params[[1]]$y.range[2],), 
-  #           fill = NA, color = "black"),  
-  compplot_trajectory_details3  +
-    guides(alpha = guide_legend(order = 1),
-           color = guide_legend(order = 2, nrow = 3)) +
-    theme(legend.position = c(0,0),
-          legend.justification = c(0,0),
-          legend.margin = margin(l = 10, b = 10),
-          legend.box = "center",
-          legend.box.just = "left"),
-  rel_heights = c(1,2), nrow = 2,
-  axis = "rl",   align = "hv",
-  labels = c("a)", "b)")
-)
-
-### -> Figure 2 Treatment effects 2024 ####
-legend2 <- ggpubr::get_legend(
-  plots_TrtEff_OF[["DiasporeMass"]]+ theme(legend.position = "bottom", legend.justification="center") + guides(linetype = "none")
-)
-
-
-plot_grid(
-  plot_grid(
+rel_biom_sp_w_trait_OF <- data_quality_OF %>%
+  group_by(Treatment) %>%
+  summarize(
+    rel_biomass_Nmass.sd        = sd(rel_biomass_Nmass),
+    rel_biomass_LeafArea.sd     = sd(rel_biomass_LeafArea),
+    rel_biomass_LMA.sd          = sd(rel_biomass_LMA),
+    rel_biomass_LDMC.sd         = sd(rel_biomass_LDMC),
+    rel_biomass_PlantHeight.sd  = sd(rel_biomass_PlantHeight),
+    rel_biomass_DiasporeMass.sd = sd(rel_biomass_DiasporeMass),
     
-    plots_effect_correlations[["Nmass"]] + theme(legend.position = "none"),
-    plots_effect_correlations[["DiasporeMass"]] + theme(legend.position = "none"),
-    plots_effect_correlations[["PlantHeight"]] + theme(legend.position = "none"),
-    plots_effect_correlations[["LeafArea"]] + theme(legend.position = "none"),
-    plots_effect_correlations[["LMA"]] + theme(legend.position = "none"),
-    plots_effect_correlations[["LDMC"]] + theme(legend.position = "none"),
-    
-    ncol=2, align= "hv",
-    
-    labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+    rel_biomass_Nmass.mean        = mean(rel_biomass_Nmass),
+    rel_biomass_LeafArea.mean     = mean(rel_biomass_LeafArea),
+    rel_biomass_LMA.mean          = mean(rel_biomass_LMA),
+    rel_biomass_LDMC.mean         = mean(rel_biomass_LDMC),
+    rel_biomass_PlantHeight.mean  = mean(rel_biomass_PlantHeight),
+    rel_biomass_DiasporeMass.mean = mean(rel_biomass_DiasporeMass),
+  ) %>% 
   
-  ggdraw(legend2),
-  ncol = 1,
-  rel_heights = c(0.95, 0.05)
-)
-
-### -> Figure 3 Species biomass change####
-heatmap + theme(legend.key.width = unit(1.2, "cm"))
-
-### -> Figure S1 Detail PCA ~ Time####
-compplot_trajectory_details
-
-### -> Figure S2 Biodiversity CWM tissue N ####
-treatment_legend <- ggpubr::get_legend(
-  ggplot(CWM_OF, aes(y = CWM_LeafArea_Biom , x = Year, color = Treatment, fill = Treatment)) +
-    theme(legend.position = "bottom", legend.justification="center") +
-    scale_color_manual(breaks = mybreaks,
-                       values = myvalues,
-                       labels = mylabels) +
-    scale_fill_manual(breaks = mybreaks,
-                      values = myvalues,
-                      labels = mylabels) +
-    geom_line() 
-)
-
-year_legend <- ggpubr::get_legend(
-  plots_Bio$DiasporeMass$SR_Year + 
-    theme(legend.position = "bottom", legend.justification="center") +
-    labs(color = "")
-)
-
-plot_grid(
-  plot_grid(
-    plots_Bio[["Nmass"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_FG_Bio[["Nmass"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_Bio[["Nmass"]]$Treatment_SR + theme(legend.position = "none"),   
-    plots_FG_Bio[["Nmass"]]$Treatment_SR + theme(legend.position = "none"),
-    plots_Bio[["Nmass"]]$SR_Year + theme(legend.position = "none"),        
-    plots_FG_Bio[["Nmass"]]$SR_Year + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
+  pivot_longer(cols= !Treatment) %>%
+  separate_wider_delim(name, delim = ".", names = c("trait", "measure")) %>%
+  pivot_wider(id_cols = c(Treatment, trait), names_from = measure, values_from = value) %>%
+  mutate(trait = gsub(trait, pattern = "rel_biomass_", replacement = ""),
+         trait = factor(trait, 
+                        levels = c("Nmass", "DiasporeMass", 
+                                   "PlantHeight", "LeafArea",
+                                   "LMA", "LDMC"))) %>%
   
-  plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S3 Biodiversity CWM leaf area ####
-plot_grid(
-  plot_grid(
-    plots_Bio[["LeafArea"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_FG_Bio[["LeafArea"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_Bio[["LeafArea"]]$Treatment_SR + theme(legend.position = "none"),   
-    plots_FG_Bio[["LeafArea"]]$Treatment_SR + theme(legend.position = "none"),
-    plots_Bio[["LeafArea"]]$SR_Year + theme(legend.position = "none"),        
-    plots_FG_Bio[["LeafArea"]]$SR_Year + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
-  
-  plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S4 Biodiversity CWM plant height ####
-plot_grid(
-  plot_grid(
-    plots_Bio[["PlantHeight"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_FG_Bio[["PlantHeight"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_Bio[["PlantHeight"]]$Treatment_SR + theme(legend.position = "none"),   
-    plots_FG_Bio[["PlantHeight"]]$Treatment_SR + theme(legend.position = "none"),
-    plots_Bio[["PlantHeight"]]$SR_Year + theme(legend.position = "none"),        
-    plots_FG_Bio[["PlantHeight"]]$SR_Year + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
-  
-  plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S5 Oldfield CWM plant height ####
-plot_grid(
-  plot_grid(
-    plots_OF[["PlantHeight"]] + theme(legend.position = "none"),
-    plots_FG_OF[["PlantHeight"]] + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)")),
-  
-  ggdraw(treatment_legend),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S6 Oldfield CWM LMA ####
-plot_grid(
-  plot_grid(
-    plots_OF[["LMA"]] + theme(legend.position = "none"),
-    plots_FG_OF[["LMA"]] + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)")),
-  
-  ggdraw(treatment_legend),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S7 Oldfield CWM LDMC ####
-plot_grid(
-  plot_grid(
-    plots_OF[["LDMC"]] + theme(legend.position = "none"),
-    plots_FG_OF[["LDMC"]] + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)")),
-  
-  ggdraw(treatment_legend),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S8 Treatment effects over time ####
-plot_grid(
-  
-  plot_grid(
-    plots_TrtEff[["Nmass"]] + theme(legend.position = "none"),
-    plots_TrtEff[["DiasporeMass"]] + theme(legend.position = "none"),
-    plots_TrtEff[["PlantHeight"]] + theme(legend.position = "none"),
-    plots_TrtEff[["LeafArea"]] + theme(legend.position = "none"),
-    plots_TrtEff[["LMA"]] + theme(legend.position = "none"),
-    plots_TrtEff[["LDMC"]] + theme(legend.position = "none"),
-    
-    ncol=2, align= "hv",
-    
-    labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
-  
-  ggdraw(legend2),
-  ncol = 1,
-  rel_heights = c(0.95, 0.05)
-)
-
-### -> Figure S9 Biodiversity inverse simpson ####
-plot_grid(
-  plot_grid(
-    plots_Bio[["invsimpson"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_FG_Bio[["invsimpson"]]$Treatment_Year + theme(legend.position = "none"),
-    plots_Bio[["invsimpson"]]$Treatment_SR + theme(legend.position = "none"),   
-    plots_FG_Bio[["invsimpson"]]$Treatment_SR + theme(legend.position = "none"),
-    plots_Bio[["invsimpson"]]$SR_Year + theme(legend.position = "none"),        
-    plots_FG_Bio[["invsimpson"]]$SR_Year + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)", "c)", "d)", "e)", "f)")),
-  
-  plot_grid(ggdraw(treatment_legend), ggdraw(year_legend), rel_widths = c(3,1)),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
-
-### -> Figure S10 Oldfield inverse simpson ####
-plot_grid(
-  plot_grid(
-    plots_OF[["invsimpson"]] + theme(legend.position = "none"),
-    plots_FG_OF[["invsimpson"]] + theme(legend.position = "none"),
-    
-    ncol = 2, align = "hv",
-    
-    labels = c("a)", "b)")),
-  
-  ggdraw(treatment_legend),
-  ncol = 1,
-  rel_heights = c(0.9, 0.1))
+  ggplot(aes(y = mean, x = trait, color = Treatment)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_color_manual(values = myvalues, breaks = mybreaks, labels = mylabels) +
+  scale_x_discrete(breaks = c("Nmass", 
+                              "DiasporeMass", 
+                              "PlantHeight", 
+                              "LeafArea", 
+                              "LMA", 
+                              "LDMC"),
+                   labels = c("CWM Tissue N [%]", 
+                              "CWM Seed mass [mg]",
+                              "CWM Plant height [m]",
+                              "CWM Leaf area ["~mm^2~"]", 
+                              "CMW LMA [g "~m^-2~"]",
+                              "CWM LDMC",
+                              "Inverse Simpson"))+
+  labs(y = "Relative biomass of species with trait value (mean +/- sd)",
+       title = "Oldfield experiment",
+       x = element_blank()) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymax = mean + sd, ymin = mean - sd), width = 0.2, position = position_dodge(width = 0.5))
 
 
-### -> Figure S11 Species biomass response ~ trait correlation ####
-plot_sp_TrtEff2
-
-### -> Figure S12 Species biomass response correlation between experiments ####
-plot_sp_TrtEff_cor
 
 
 #___________________________________________________________________________####

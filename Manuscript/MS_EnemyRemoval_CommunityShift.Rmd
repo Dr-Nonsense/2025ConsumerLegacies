@@ -9,20 +9,21 @@ output:
     toc_depth: 5
 date: "`r Sys.Date()`"
 bibliography: EnemyRemoval_CommunityShifts_References.bib
-csl: ecology-letters.csl
+csl: new-phytologist.csl
 ---
 
 <style>
 body {
-font-family: Times New Roman;
-p {line-height: 2em;};
-text-align: justify}
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  text-align: justify;
+}
 </style>
 
 ```{r setup, include=FALSE, warning = F, message=F, echo=F}
 require(knitr)
 knitr::opts_chunk$set(echo = F, message=F, warning=F, error=F)
-
 
 library(tidyverse)
 # dplyr     1.1.4     # readr     2.1.5
@@ -47,12 +48,6 @@ library(glue)       # 1.8.0
 library(captioner)  # 2.2.3.9000
 
 
-# project path:
-EnemyRemovalDIR <- getwd() %>% gsub(pattern = "/Manuscript", replacement = "")
-
-# source(paste(EnemyRemovalDIR, "code-analysis/analysis.R", sep = "")
-load(paste(EnemyRemovalDIR, "/results/CWMs_BIOM.RData", sep = ""))
-
 theme_set(theme_cowplot()+
             theme(panel.border = element_rect(colour = "black", fill=NA, size=0.5))+
             theme(axis.text = element_text(size=8),
@@ -62,7 +57,11 @@ theme_set(theme_cowplot()+
                   title = element_text(size=10),
                   text = element_text(size = 8)))
 
+# project path:
+EnemyRemovalDIR <- getwd() %>% gsub(pattern = "/Manuscript", replacement = "")
 
+# source(paste(EnemyRemovalDIR, "code-analysis/analysis.R", sep = "")
+load(paste(EnemyRemovalDIR, "/results/CWMs_BIOM.RData", sep = ""))
 
 treatment_legend <- ggpubr::get_legend(
   ggplot(CWM_OF, aes(y = CWM_LeafArea_Biom, x = Year, color = Treatment, fill = Treatment)) +
@@ -96,7 +95,9 @@ fig_s_nums <- captioner(prefix = "Figure S", suffix = ": ", auto_space = F)
 table_nums <- captioner(prefix = "Table")
 # Supplementary tables
 table_s_nums <- captioner(prefix = "Table S", suffix = ": ", auto_space = F)
+
 ```
+
 
 **Short title: Plant community response to consumer exclusion**
 
@@ -111,43 +112,65 @@ scappell@umn.edu; seraina.cappelli@gmail.com
 
 ^1^Department of Ecology, Evolution and Behavior, College of Biological Sciences, University of Minnesota, Saint Paul, Minnesota, USA
 
+*Keywords*: Consumer exclusion, Community composition, Grassland, Insect herbivores, Functional traits, Fungal pathogens, Legacy effects, Pesticide
+
+*Number of figures*: 3 (all with color)
+
+*Number of tables*: 0
+
+```{r count-citations, echo=FALSE, message=FALSE, warning=FALSE}
+library(stringr)
+
+# Read in the Rmd source file
+rmd_text <- readLines(knitr::current_input())
+
+# Collapse into one string in case a citation is split across lines
+rmd_text_all <- paste(rmd_text, collapse = " ")
+
+# Match all occurrences of @citation_key patterns
+cite_keys <- str_extract_all(rmd_text_all, "@[A-Za-z0-9_:-]+")[[1]]
+
+# Clean the @ from the citation keys
+cite_keys <- gsub("^@", "", cite_keys)
+
+# Remove duplicates
+unique_cites <- unique(cite_keys)
+
+# Output number of cited references
+cat("Number of cited references:", length(unique_cites))
+```
+
+*supporting information*: 1
+
+*Summary*: 
+
+*Introduction*:
+
+*Materials and Methods*:
+
+*Results*:
+
+*Discussion*:
+
+*Figure legends*: 
 
 
-**Statement of Authorship**: SLC conceived the idea for this study, arranged the data, conducted all analyses and wrote the first draft of the manuscript. EWS and ETB are maintaining the experiments from which most of the data used for this study originate. They advised the analysis and contributed substantially to manuscript revisions.
-
-**Data accessibility**: Most of the original data used for this study are publicly available (https://doi.org/10.6073/pasta/c1ffd1c48b504e97a93fbe3583b2508f, https://doi.org/10.6073/pasta/303607d5f92929a4b20ba127c47d21f0, https://doi.org/10.1038/s41597-022-01774-9). Additional data, steps of data processing, analysis and visualization are available for review on GitHub (https://github.com/Dr-Nonsense/2025ConsumerLegacies) and will be archived in a public repository upon manuscript publication.
-
-**Keywords**: Consumer exclusion, Community composition, Grassland, Insect herbivores, Insecticide, Functional traits, Fungal pathogens, Fungicide, Legacy effects
-
-**Article type**: Letter
-
-**Abstract length**: 140 words
-
-**Main text length**: 4969 words
-
-**Number of figures**: 3
-
-**Number of tables**: 0
-
-**Number of text boxes**: 0
-
-**Number of references**: 98
 
 
-
-# Abstract
-Small consumers like microbial pathogens and insect herbivores have long been suggested as drivers of host community composition. Small consumers reduce biomass  and oftentimes promote host diversity, but their impact on the functional composition of plant communities has rarely been studied. Plant defenses, involved in ecological trade-offs, vary among species but can be costly. Thus, consumer pressure may determine community composition by shaping a community’s trait composition. Using long-term consumer exclusion experiments replicated in an experimentally planted and a naturally assembling grassland, we show that small consumers push their host communities towards high structural defense, low apparency, and low palatability. Small-scale, short-term studies in natural ecosystems may overlook this, due to legacy effects of past consumption, ongoing consumption in the surroundings and dispersal limitation. The consumer-induced trait shifts may alter ecosystem functions and potentially slow down process rates in ecosystems.
+# Summary
+* Small consumers like microbial pathogens and insect herbivores have long been suggested as drivers of host community composition. Small consumers reduce biomass  and oftentimes promote host diversity, but their impact on the functional composition of plant communities has rarely been studied. Plant defenses, involved in ecological trade-offs, vary among species but can be costly. Thus, consumer pressure may determine community composition by shaping a community’s trait composition. 
+* We used long-term consumer exclusion treatments (foliar fungicide, soil drench fungicide, insecticide) replicated in an experimentally planted and a naturally assembling grassland and measured community weighted mean functional trait changes over time.
+* We show that small consumers push their host communities towards high structural defense, low apparency, and low palatability. 
+* Small-scale, short-term studies in natural ecosystems may overlook this, due to legacy effects of past consumption, ongoing consumption in the surroundings and dispersal limitation. The consumer-induced trait shifts may alter ecosystem functions and potentially slow down process rates in ecosystems.
 
 # Introduction
-Plant communities are composed of the species that successfully disperse to a location, tolerate abiotic conditions, and cope with biotic pressures such as competition and consumption [@HilleRisLambers.2012; @Vellend.2010; @Hutchinson.1957; @Gleason.1926; @Godwin.1923; @Darwin.1859]. Large consumers have long been considered an important driver of plant community composition[@Darwin.1859; @Hutchinson.1957]; however, a growing body of literature suggests that small consumers, like insects and microbial pathogens, may also determine local plant diversity and community composition. Exclusion studies have shown that small consumers can consume biomass in amounts comparable to mammalian consumers [@Seabloom.2017; @Allan.2010; @Stein.2010; @Coupe.2003]. By reducing biomass, small consumers may impact local light and nutrient conditions and therefore the competitive environment, which can promote species diversity [@Borer.2014; @Descombes.2020]. Where small consumers disproportionately suppress abundant species, apparent competition can support plant diversity [@Janzen.1970; @Connell.1971]. However, density-dependent impacts can also reduce plant diversity [e.g. @Holt.1977; @Jia.2018; @Song.2022]. Small consumers like fungal pathogens and insect herbivores can serve as filters in community assembly, but their effects on plant community composition remain poorly understood.
-*Elizabeth: poor justification. Is "remains untested" better? I struggle putting this in words: we have very well informed expectations based on molecular and species level knowledge, but if it is true has not been tested if its true in complex natural communities*
+Plant communities are composed of the species that successfully disperse to a location, tolerate abiotic conditions, and cope with biotic pressures such as competition and consumption [@HilleRisLambers.2012; @Vellend.2010; @Hutchinson.1957; @Gleason.1926; @Godwin.1923; @Darwin.1859]. Large consumers have long been considered an important driver of plant community composition [@Darwin.1859; @Hutchinson.1957]; however, a growing body of literature suggests that small, non-mammalian consumers, like insects and microbial pathogens (hereafter small consumers), may also determine local plant diversity and community composition. Exclusion studies have shown that small  consumers can consume biomass in amounts comparable to mammalian consumers [@Seabloom.2017; @Allan.2010; @Stein.2010; @Coupe.2003]. There is a broad range of small consumers, with varying degree of specialization, feeding modes and defenses they trigger in their hosts. Both insect herbivores and fungal pathogens range in specialization [@Forister.2015; @Semchenko.2022], and members of both groups can trigger the same defense pathways [@Thaler.2010]. They can potentially influence host community composition in a variety of ways, which can be broadly classified into density dependent and fitness difference related mechanisms [@Chesson.2008; @Mordecai.2011]. It has long been suggested and often shown that especially specialized small consumers promote species richness by suppressing the most abundant species through negative density dependence [@Janzen.1970; @Connell.1971]. However, density-dependent impacts can also reduce plant diversity [e.g. @Holt.1977; @Jia.2018; @Song.2022]. Some consumers may also disproportionately suppress some species, independently of their abundance [@Mordecai.2011]. Small consumers like fungal pathogens and insect herbivores can thus serve as filters in community assembly. While the effect of single consumer species in simple host communities have been modeled [e.g. @Keesing.2006] and documented [e.g. @Mordecai.2011], their combined effects in complex natural communities beyond species richness, remains untested.
 
-Consumer impacts on plant communities operate within the context of the traits of  plant community members. Trade-offs among investments in defense, growth, and competitive ability can underlie shifts in the abundance of species. Defense against consumers often comes at the cost of competitive abilities [@Chase.2002; @Viola.2010; @Terborgh.2015; @Holt.1994], growth [@Cappelli.2020; @Zaret.2024; @Lind.2013; @Giolai.2024], or tolerance to consumption [@Kempel.2011; @Parker.2018]. These trade-offs may be phylogenetically constrained [@Gougherty.2021], leading to turnover among plant species groups [@Seabloom.2018; @LaPierre.2015; @Stein.2010] or in dominance structure [@Schadler.2004.Oecologia; @Korell.2019; @Carson.1999; @LaPierre.2015] in response to altered consumer pressure. Traits associated with defense can be favored when consumer pressure is high [@Cappelli.2020] and the same traits can alter plant interactions with a wide range of consumers [@Lind.2013; @Cappelli.2020; @Zaret.2024; @Liu.2022], often reducing the community's susceptibility to many consumer groups. However, whether small consumers control the trait composition of entire communities remains untested [but see @Szefer.2020; @Yan.2022; @Cappelli.2020]. Studying functional traits, in addition to single species or species groups, provides a mechanistic understanding of ecosystem processes [@Diaz.2007] enabling generalized predictions of consumer impacts [@Gardarin.2018].
+Consumer impacts on plant communities operate within the context of the traits of plant community members. Trade-offs among investments in defense, growth, and competitive ability determine which species experience disproportionate consumer impacts, which may lead to altered fitness differences among species and ultimately abundance changes and species turnover. Defense against consumers often comes at the cost of competitive abilities [@Chase.2002; @Viola.2010; @Terborgh.2015; @Holt.1994], growth [@Cappelli.2020; @Zaret.2024; @Lind.2013; @Giolai.2024], or tolerance to consumption [@Kempel.2011; @Parker.2018]. These trade-offs may be phylogenetically constrained [@Gougherty.2021], leading to turnover among plant species groups [@Seabloom.2018; @LaPierre.2015; @Stein.2010] or in dominance structure [@Schadler.2004.Oecologia; @Korell.2019; @Carson.1999; @LaPierre.2015] in response to altered consumer pressure. Traits associated with defense can be favored when consumer pressure is high [@Cappelli.2020] and the same traits can alter plant interactions with a wide range of consumers [@Lind.2013; @Cappelli.2020; @Zaret.2024; @Liu.2022], often reducing the community's susceptibility to many consumer groups. However, whether small consumers control the trait composition of entire communities remains untested [but see @Szefer.2020; @Yan.2022; @Cappelli.2020]. Studying functional traits, in addition to single species or species groups, provides a mechanistic understanding of ecosystem processes [@Diaz.2007] enabling generalized predictions of consumer impacts [@Gardarin.2018].
 
-A challenge in quantifying small consumer impacts on plant communities is one of legacies. Excluding consumers from existing plant communities has been a key method to study their effects [@Beaumelle.2023; @McInturff.2020]. However, inference from these studies commonly does not consider legacies of past interactions that may constrain plant community responses, with impacts on plant species composition, including species excluded by consumption persisting for decades to millennia [@Husheer.2024; @Nuttle.2011; @Allan.2011; @Furey.2024; @Knops.2000]. Because many plant species have correlated susceptibility to a range of herbivores, plant communities with a history of vertebrate grazing, like grasslands, may be dominated by plant species resistant to or tolerant of consumption by small consumers [@Zaret.2024; @Seabloom.2018; @Hulme.1996]. This leaves open the possibility that variation among field experiments in response to small consumer removal [e.g. @Janzen.1970; @Connell.1971; @Schmidt.2020] arises because t
-such experiments - especially short-term studies - are performed in plant communities shaped by varying legacies of consumer pressure.
+A general challenge in ecological studies in naturally assembled communities is one of legacies. Excluding consumers from existing plant communities has been a key method to study their effects [@Beaumelle.2023; @McInturff.2020]. However, inference from these studies commonly does not consider legacies of past interactions that may constrain plant community responses, with impacts on plant species composition, including species excluded by consumption persisting for decades to millennia [@Husheer.2024; @Nuttle.2011; @Allan.2011; @Furey.2024; @Knops.2000]. Because many plant species have positively correlated susceptibility to a range of herbivores, plant communities with a history of vertebrate grazing, like grasslands, may be dominated by plant species resistant to or tolerant of consumption by small consumers [@Zaret.2024; @Seabloom.2018; @Hulme.1996]. This leaves open the possibility that variation among field experiments in response to small consumer removal [e.g. @Janzen.1970; @Connell.1971; @Schmidt.2020] arises because such experiments - especially short-term studies - are performed in plant communities shaped by varying legacies of consumer pressure.
 
-Here, using naturally and experimentally assembled plant communities, we quantify the impacts of insects and fungi on plant composition and traits through 16 years of small consumer exclusion [@Borer.2015; @Seabloom.2018]. By pairing consumer exclusion studies in plant communities with and without legacies of large herbivores, we disentangle past  from ongoing consumer impacts on plant community and trait composition. We excluded consumers from a long-term plant biodiversity experiment and from a nearby oldfield grassland that had been abandoned from agriculture 50 years before the experiment started. In the experimentally assembled plant community, species were randomly assembled from a set of local grassland species [@Tilman.2006]. The field excluded large herbivores, thus species compositions are independent of past mammalian herbivory. In contrast, the initial community composition in the oldfield represents the net effect of a legacy of five decades of selection via trade-offs among defense, competition, and dispersal of plant species in the presence of vertebrate, invertebrate, and fungal consumers. Here, the experimental treatments were applied to plant communities with traits reflecting this legacy. We used these plant communities to test how small consumers influence community reassembly across diverse communities with varying species and trait compositions. 
+Here, using naturally and experimentally assembled plant communities, we quantify the impacts of insects and fungi on plant composition and traits through 16 years of small consumer exclusion [insecticide, foliar fungicide, soil drench fungicide, and in addition deer fence,@Borer.2015; @Seabloom.2018]. By pairing consumer exclusion studies in plant communities with and without legacies of large herbivores, we disentangle past  from ongoing consumer impacts on plant community and trait composition. We excluded consumers from a long-term plant biodiversity experiment and from a nearby oldfield grassland that had been abandoned from agriculture 50 years before the experiment started. In the experimentally assembled plant community, species were randomly assembled from a set of local grassland species [@Tilman.2006]. The field excluded large herbivores, thus species compositions are independent of past mammalian herbivory. In contrast, the initial community composition in the oldfield represents the net effect of a legacy of five decades of selection via trade-offs among defense, competition, and dispersal of plant species in the presence of vertebrate, invertebrate, and fungal consumers. Here, the experimental treatments were applied to plant communities with traits reflecting this legacy. We used these plant communities to test how small consumers influence community reassembly across diverse communities with varying species and trait compositions. 
 
 We expected larger compositional responses to consumer removal in the oldfield than in the biodiversity experiment, for two reasons.
 First, in the oldfield experiment, new species that can benefit from reduced consumer pressure may colonize plots and complement or replace species in the plots. In the biodiversity experiment colonization is prevented by weeding, and planted species can only respond with abundance changes or local extinctions.
@@ -155,9 +178,9 @@ Second, the average species richness is likely higher in the oldfield than the b
 In contrast, locally high deer herbivory in the oldfield experiment might have left a legacy of a narrower trait range [@Jochum.2020] and domination by species with high consumer resistance traits [e.g. @Knops.2000] compared to the biodiversity experiment communities. This could constrain the oldfield responses to consumer pressure, despite higher species richness, especially if dispersal limitation reduces colonization by new species even after consumer exclusion.
 
 
-# Methods
+# Materials and Methods
 The consumer removal experiments are at the Cedar Creek Ecosystem Science Reserve in Minnesota, USA (Latitude 45.4N, Longitude 93,2 W). Cedar Creek is dominated by low fertility, sandy soils and has a mean annual precipitation of about 750 mm and a mean annual temperature of 6°C.
-In both experiments, consumers were excluded using pesticides every 2 weeks throughout the growing seasons (April – mid September) from 2008 until 2024. We excluded either foliar fungi (biweekly application of Quilt, Syngenta Crop Protection, Inc, Greensboro, NC, USA, based on 7.5% azoxystrobin and 12.5% propiconazole), soil oomycetes (monthly application of Ridomil Gold SL, Syngenta Crop Protection, Inc. based on 45% mefenoxam), insects (biweekly application of Marathon II, OHP, Inc., Mainland, PA, USA, based on 21.4% imidacloprid, occasionally alternated with malathion) or all groups together. Plots without pesticides served as control [see @Borer.2015; @Seabloom.2017].
+In both experiments, consumers were excluded using pesticides every 2 weeks throughout the growing seasons (April – mid September) from 2008 until 2024. We excluded either foliar fungi (biweekly application of Quilt, Syngenta Crop Protection, Inc, Greensboro, NC, USA, based on 7.5% azoxystrobin and 12.5% propiconazole), soil oomycetes (monthly application of Ridomil Gold SL, Syngenta Crop Protection, Inc. based on 45% mefenoxam), insects (biweekly application of Marathon II, OHP, Inc., Mainland, PA, USA, based on 21.4% imidacloprid, occasionally alternated with malathion) or all groups together. Plots without pesticides (and without water-based mock treatment) served as control. Previously, we showed insecticide and foliar fungicide to respectively reduce insect herbivory twofold and signs of fungal disease threefold and all pesticides decreased biomass loss to consumption. The pesticides impact on biomass could not be attributed to unintended direct effects on plant growth [see @Borer.2015; @Seabloom.2017].
 
 ```{r basicSpNrs}
 Bio_design_FG <- design %>% 
@@ -232,10 +255,10 @@ OF_is_ty <- anova_OF[anova_OF$trait == "invsimpson" & anova_OF$Var == "Treatment
 ```
 
 ## Biodiversity Experiment
-This experiment used 41 9m x 9m plots of a grassland biodiversity experiment started in 1994. Plots contained random mixes of native prairie plants of varying species diversity (1-32), maintained through weeding. The experiment was designed based on `r sum(Bio_design_FG)` species - `r Bio_design_FG["C3",]` C3 grasses, `r Bio_design_FG["C4",]`  C4 grasses, `r Bio_design_FG["L",]` legumes, `r Bio_design_FG["F",]` non-leguminous forbs and `r Bio_design_FG["W",]` woody species [@Tilman.2006]. The two woody species were disregarded in our analyses. The consumer removal treatments were started in 1.5m x 2m subplots in 2008. All five treatments were nested within all 41 plots which resulted in 205 subplots [@Borer.2015]. The plots used for this study (monocultures were excluded, see below) had on average `r Sown_SR_Bio$SR` species originally planted, but we observed on average `r round(SR_Bio$SR, digits = 2)` ± `r round(SR_Bio$SR_se, digits = 2)` in the treatment subplots. 
+This experiment used 41 9m x 9m plots of a grassland biodiversity experiment started in 1994. Plots contained random mixes of native prairie plants of varying species diversity (1-32), maintained through weeding. The experiment was designed based on `r sum(Bio_design_FG)` species - `r Bio_design_FG["C3",]` C3 grasses, `r Bio_design_FG["C4",]`  C4 grasses, `r Bio_design_FG["L",]` legumes, `r Bio_design_FG["F",]` non-leguminous forbs and `r Bio_design_FG["W",]` woody species [@Tilman.2006]. The two woody tree species were disregarded in our analyses. The consumer removal treatments were started in 1.5m x 2m subplots in 2008. All five treatments were nested within all 41 plots which resulted in 205 subplots [@Borer.2015]. The plots used for this study (monocultures were excluded, see below) had on average `r Sown_SR_Bio$SR` species originally planted, but we observed on average `r round(SR_Bio$SR, digits = 2)` ± `r round(SR_Bio$SR_se, digits = 2)` in the treatment subplots. The entire experiment was fenced against large mammalian herbivores, like reed deer. Small rodents like pocket gophers can access the area freely.
 
 ## Oldfield Experiment
-The same consumer removal treatments, with the addition of a fencing treatment to exclude large mammalian herbivores, were established in 2008 in eight blocks in a field abandoned from agriculture in 1956. Here, the treatment excluding all consumers included fencing, too, making it comparable to the biodiversity experiment treatment. This experiment consisted of 48 3m x 3m plots - 6 plots per block. Each plot per block was randomly assigned to one consumer exclusion treatment [@Seabloom.2018]. We identified `r sum(OF_sp_FG)` species - `r OF_sp_FG["C3",]` C3 grasses, `r  OF_sp_FG["C4",]` C4 grasses, `r  OF_sp_FG["L",]` legumes, `r  OF_sp_FG["F",]`,  non-leguminous forbs and `r  OF_sp_FG["W",]` woody species. On average, a plot contained `r round(SR_OF$SR, digits = 2)` ± `r round(SR_OF$SR_se, digits = 2)` species.
+The same consumer removal treatments, with the addition of a fencing treatment to exclude large mammalian herbivores, were established in 2008 in eight blocks in a field abandoned from agriculture in 1956. Here, the treatment excluding all consumers included fencing, too, making it comparable to the biodiversity experiment treatment. This experiment consisted of 48 3m x 3m plots - 6 plots per block. Each plot per block was randomly assigned to one consumer exclusion treatment [@Seabloom.2018]. Since *20XX* the experiment is fenced against bison that grazed in the surrounding field. However, deer still accessed the experiment (feces in plots). We identified `r sum(OF_sp_FG)` species - `r OF_sp_FG["C3",]` C3 grasses, `r  OF_sp_FG["C4",]` C4 grasses, `r  OF_sp_FG["L",]` legumes, `r  OF_sp_FG["F",]`,  non-leguminous forbs and `r  OF_sp_FG["W",]` woody species. As in the biodiversity experiment, trees were disregarded in our analyses, but not shrubs (*Rosa arkansana*, *Rhus glabra*, and *Toxicodendron radicans*). On average, a plot contained `r round(SR_OF$SR, digits = 2)` ± `r round(SR_OF$SR_se, digits = 2)` species.
 
 ## Community composition
 ```{r quality numbers}
@@ -288,17 +311,17 @@ qual_LDMC_of <-  (data_quality_OF %>%
   mutate(xx = paste(mean, " ± ", sd, "%", sep = "")))$xx
 ```
 
-We characterized the plant community composition in both experiments based on traits, functional group abundance and species diversity. For this, we used species level above-ground biomass from 2009 to 2024, collected annually (except for 2019 and 2020) in clip strips of 1m x 10cm [@Kinkel.2024a; @Kinkel.2024b]. Based on plant abundance and species trait data from @Diaz.2022 we calculated community weighted trait means (CWM) for each plot and year. In the biodiversity experiment, we used only species initially planted in each plot. 
+We characterized the plant community composition in both experiments based on traits, functional group abundance and species diversity. For this, we used species level above-ground biomass from 2009 to 2024, collected annually (except for 2019 and 2020) in clip strips of 1m x 10cm [@Kinkel.2024a; @Kinkel.2024b]. Based on plant abundance and species trait data from @Diaz.2022 we calculated community weighted trait means (CWM) for each plot and year. In the biodiversity experiment, we used only species initially planted in each plot. Trees were excluded for the calculation of CWM traits.
 The traits related to palatability and nutritional value (leaf tissue nitrogen and seed mass), plant size (leaf area and plant height), and leaf structure and toughness (leaf mass area [LMA], leaf dry matter content [LDMC]). On average, plants with trait data comprised `r qual_bio` of the total plant biomass in the biodiversity and `r qual_of` in the oldfield experiment for all traits except for LDMC. Plants with LDMC data available accounted for `r qual_LDMC_bio` (biodiversity) and `r qual_LDMC_of` (oldfield) of the biomass. 
 Further, we assigned a functional group (C3 grass, C4 grass, leguminous forb, non-leguminous forb, sedge or woody) to each plant species and calculated the functional group abundance per plot and year. 
 To estimate realized species diversity, we calculated the Inverse Simpson index of diversity, which includes species evenness and species numbers, for each plot and year. Because CWM and diversity cannot vary in monocultures, we excluded the monoculture plots from this analysis. We used 130 treatment plots within 26 diversity plots.
 
 ## Analysis
 
-We did all analyses in R [@RCoreTeam.2022] and visualizations with ggplot2 [@Wickham.2016]. We analyzed community composition (scaled CWM trait values) with a principal component analysis (PCA). To assess how much variation in community composition was explained by the presence of small consumers - and in the biodiversity experiment, species richness - throughout the study, we used a Permutational ANOVA (PERMANOVA) using the adonis2 function with Euclidian distance from vegan on scaled CWM trait data [@Oksanen.2019]. We included treatment, year, and for the biodiversity experiment, log-transformed species richness, as explanatory variables. To visualize the temporal change in community composition under different treatment combinations, we calculated the ellipse center for each experiment, treatment, and year, regressed the centers PC1 and PC2 scores against year for each treatment and experiment, and mapped the model predictions to the PCA plot.
+We did all analyses in R [@RCoreTeam.2022] and visualizations with ggplot2 [@Wickham.2016]. We analyzed community composition (scaled CWM trait values) with a principal component analysis (PCA). To assess how much variation in community composition was explained by the presence of small consumers - and in the biodiversity experiment, species richness - throughout the study, we used a Permutational ANOVA (PERMANOVA) using the adonis2 function with Euclidian distance from vegan on scaled CWM trait data [@Oksanen.2019]. We included treatment, year, and for the biodiversity experiment, log-transformed sown species richness, as explanatory variables. To visualize the temporal change in community composition under different treatment combinations, we calculated the ellipse center for each experiment, treatment, and year, regressed the centers PC1 and PC2 scores against year for each treatment and experiment, and mapped the model predictions to the PCA plot.
 
-We tested treatment, time, and sown species richness effects in the biodiversity experiment on CWM trait values and realized diversity (Inverse Simpson) with linear mixed effect models fitted with lme4 [@Bates.2015]. For both experiments we included year and consumer removal treatment as fixed effects. For the biodiversity experiment, we also included the log-transformed sown species richness as fixed effect. We fitted all possible interactions between fixed effects and included random intercepts for plot and year. The random intercept per treatment plot was nested within diversity experiment plot (biodiversity) or block (oldfield). For detailed Tukey post-hoc analyses, we used emmeans [@Lenth.2022].
-Further, we tested if functional plant group abundances underpinned treatment effects on CWM trait values by fitting contrasts for the abundance of each single functional group before the other fixed effects in each model. We  compared the effects of year and treatment on CWM traits between the initial model and the model with the abundance of the most important (based on lowest model AIC) functional group.
+We tested treatment, time, and sown species richness effects in the biodiversity experiment on CWM trait values and realized diversity (Inverse Simpson) with linear mixed effect models fitted with lme4 [@Bates.2015]. For both experiments we included year and consumer removal treatment as fixed effects. For the biodiversity experiment, we also included the log-transformed sown species richness as fixed effect. We fitted all possible interactions between fixed effects and included random intercepts for plot and year. The random intercept per treatment plot was nested within diversity experiment plot (biodiversity) or block (oldfield). For detailed post-hoc analyses, we used emmeans. For pairwise comparisons we accounted for multiple comparisons by using bonferroni adjusted p-values [@Lenth.2022].
+Further, we tested if functional plant group abundances underpinned treatment effects on CWM trait values by fitting contrasts for the abundance of each single functional group before the other fixed effects in each model. We  compared the effects of year and treatment on CWM traits between the initial model and the model with the abundance of the most important (based on lowest model AIC) functional group. We used sown species richness instead of realized species richness in the analyses of the biodiversity experiment data to capture legacy effects of the originally sown communityincluding the loss of species over time.
 
 To assess individual species abundance changes over time, we fitted a linear mixed effects model [@Bates.2015] for each species occurring 10 or more times in any treatment over time. Species' biomass was analyzed in response to treatment, year and their interaction as fixed effects with random intercepts for plot and year. From each species’ model, we extracted the average treatment effect and slope (change over time) per treatment with emmeans [@Lenth.2022].
 
@@ -548,11 +571,19 @@ In summary, small consumers shape the ecosystem functional composition, favoring
 
 
 # Acknowledgements
-We are incredibly grateful to Troy Mielke, Dan Bahauddin and the entire Cedar Creek team for running the research facility and for collecting and curating the data. We also thank Jésus Pinto-Ledezma for assembling the trait data for the Cedar Creek species. We acknowledge that our experiments are on the Dakota and Ojibwe peoples ancestral homelands, whose connection to this land continues to this day. The experiments at Cedar Creek are made possible by funding from the U.S. National Science foundation (DEB-0620652, DEB-1234162, DEB-1831944). S.L.C is supported by the Swiss National Science Foundation (P500PB_214352).
+We are incredibly grateful to Troy Mielke, Dan Bahauddin and the entire Cedar Creek team for running the research facility and for collecting and curating the data. We also thank Jésus Pinto-Ledezma for assembling the trait data for the Cedar Creek species. We acknowledge that our experiments are on the Dakota and Ojibwe peoples ancestral homelands, whose connection to this land continues to this day. The experiments at Cedar Creek are made possible by funding from the U.S. National Science foundation (DEB-0620652, DEB-1234162, DEB-1831944). S.L.C was supported by the Swiss National Science Foundation (P500PB_214352).
+
+# Competing interests
+None declared.
+
+# Author contributions
+LC conceived the idea for this study, arranged the data, conducted all analyses and wrote the first draft of the manuscript. EWS and ETB are maintaining the experiments from which most of the data used for this study originate. They advised the analysis and contributed substantially to manuscript revisions.
+
+# Data availability
+The original data used for this study are publicly available and are cited in the manuscript. The R-code for data processing, analysis and visualization are available on GitHub (https://github.com/Dr-Nonsense/2025ConsumerLegacies).
 
 # References
 <div id="refs"></div>
-
 
 # Figures
 
@@ -626,12 +657,12 @@ heatmap + theme(legend.key.width = unit(1.2, "cm"))
 ```
 
 ```{r, include = F}
-fig_nums("heatmap", "We estimated species biomass change over time per treatment for each species for which we had ten or more biomass measurements over time in any given treatment per experiment. Species for which we were able to estimate change over time in both experiments are highlighted in bold. Biomass declines over time are shown in red, biomass increases in blue. P-values for the marginal trends (t-test) are indicated by \\*, \\*\\* and \\*\\*\\* for p < 0.05, p < 0.01 and p < 0.001, respectively.")
+fig_nums("heatmap", "We estimated species biomass change over time per treatment for each species for which we had ten or more biomass measurements over time in any given treatment per experiment. Species for which we were able to estimate change over time in both experiments are highlighted in bold. Biomass declines over time are shown in red, biomass increases in blue. P-values for the marginal trends (t-test) are indicated by \\*, \\*\\* and \\*\\*\\* for p < 0.05, p < 0.01 and p < 0.001, respectively. When a species occurred sufficiently often both in control and consumer removal treatment plots, we tested if the change over time differed between the two. When this was the case (at p < 0.05), the treatment effect is highlighted with a black frame.")
 ```
 `r fig_nums("heatmap")`
 
 
-# Supplementary
+# supporting information
 **Legacy effects shape plant community responses to consumer exclusion**
 
 
