@@ -1195,7 +1195,8 @@ for (i in c("Nmass", "DiasporeMass", "PlantHeight", "LeafArea", "LMA", "LDMC", "
     scale_color_viridis(breaks = ybreaks,
                         labels = ylabels,
                         direction = -1)+
-    scale_x_continuous(breaks = c(1, 4, 16, 32))
+    scale_x_continuous(breaks = c(1, 4, 16, 32)) +
+    geom_line()
   
   
   fig_FG_SRT <- ggpredict(FG_mods_Bio[[i]][[lowest_AIC_model$model]], terms = c("Treatment", "logNumSp [1.3:3.6 by =0.2]")) %>%
