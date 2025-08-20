@@ -7,9 +7,6 @@
 # Natalie Merchant - Which Side Are You on?
 # Loreley & Me - To the Sun
 
-# project path:
-EnemyRemovalDIR <- getwd() %>% paste(., "/", sep = "")
-
 # R studio version , R Version R-4.3.1
 
 library(tidyverse)
@@ -22,6 +19,9 @@ library(vegan) # 2.6-4
 library(lme4)
 library(car)
 library(emmeans)
+
+# project path:
+EnemyRemovalDIR <- getwd() %>% paste(., "/", sep = "")
 
 #### GET DATA ####
 ##### experiment design and species information ####

@@ -662,7 +662,7 @@ fig_nums("heatmap", "We estimated species biomass change over time per treatment
 `r fig_nums("heatmap")`
 
 
-# supporting information
+# Supporting Information
 **Legacy effects shape plant community responses to consumer exclusion**
 
 
